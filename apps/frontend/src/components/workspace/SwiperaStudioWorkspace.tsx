@@ -67,7 +67,6 @@ import swiperaPlatformsData from "@/data/swiperaPlatforms";
 import { swiperaExamplesData, swiperaExampleCategories } from "@/data/swiperaExamples";
 
 import { IdeasView } from "./IdeasView";
-import { VideosView } from "./VideosView";
 import { CalendarView } from "./CalendarView";
 import { DailyFlywheelModal } from "./DailyFlywheelModal";
 import { DailyFlywheelAlertBanner } from "./DailyFlywheelAlertBanner";
@@ -75,8 +74,8 @@ import { DailyFlywheelAlertBanner } from "./DailyFlywheelAlertBanner";
 const ComposerSheet = dynamic(() => import("./ComposerSheet").then((mod) => mod.ComposerSheet));
 const AuthForm = dynamic(() => import("@/components/auth/AuthForm").then((mod) => mod.AuthForm));
 
-// Strict 3-tab rail navigation as mandated
-export type StudioTab = "create" | "templates" | "design" | "brand" | "caption" | "ideas" | "videos" | "calendar";
+// Strict rail navigation for PostPilot Carousel Studio
+export type StudioTab = "create" | "templates" | "design" | "brand" | "caption" | "ideas" | "calendar";
 
 export interface SlideData {
   id: string;
@@ -315,10 +314,8 @@ export function SwiperaStudioWorkspace({
     if (tabParam === "brand") return "brand";
     if (tabParam === "caption") return "caption";
     if (tabParam === "ideas" || tabParam === "idea") return "ideas";
-    if (tabParam === "videos" || tabParam === "video") return "videos";
     if (tabParam === "calendar" || tabParam === "schedule") return "calendar";
     if (pathname?.startsWith("/ideas")) return "ideas";
-    if (pathname?.startsWith("/videos")) return "videos";
     if (pathname?.startsWith("/calendar") || pathname?.startsWith("/schedule")) return "calendar";
     if (initialTab) return initialTab;
     return "create";
@@ -1321,8 +1318,6 @@ export function SwiperaStudioWorkspace({
     const targetPath =
       tab === "ideas"
         ? "/ideas"
-        : tab === "videos"
-        ? "/videos"
         : tab === "calendar"
         ? "/calendar"
         : "/studio";
@@ -1335,7 +1330,6 @@ export function SwiperaStudioWorkspace({
     const handlePopState = () => {
       const p = window.location.pathname;
       if (p.startsWith("/ideas")) setActiveTab("ideas");
-      else if (p.startsWith("/videos")) setActiveTab("videos");
       else if (p.startsWith("/calendar") || p.startsWith("/schedule")) setActiveTab("calendar");
       else setActiveTab("templates");
     };
@@ -2369,21 +2363,6 @@ export function SwiperaStudioWorkspace({
               <span>Idea</span>
             </button>
 
-            {/* Extended Suite: Video */}
-            <button
-              type="button"
-              data-tab="videos"
-              onClick={() => handleNavSelect("videos")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "videos" && "active"
-              )}
-              title="AI shorts & vertical video reels"
-            >
-              <i className="fas fa-video" />
-              <span>Video</span>
-            </button>
-
             {/* Extended Suite: Calendar */}
             <button
               type="button"
@@ -2443,25 +2422,7 @@ export function SwiperaStudioWorkspace({
             />
           </div>
 
-          {/* 2. VIDEOS WORKSPACE */}
-          <div
-            className={cn(
-              "flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[var(--bg)]",
-              activeTab === "videos" ? "flex" : "hidden"
-            )}
-          >
-            <VideosView
-              onOpenComposer={
-                externalOnOpenComposer ||
-                ((post) => {
-                  setComposerPost(post);
-                  setIsComposerOpen(true);
-                })
-              }
-            />
-          </div>
-
-          {/* 3. CALENDAR WORKSPACE */}
+          {/* 2. CALENDAR WORKSPACE */}
           <div
             className={cn(
               "flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[var(--bg)]",
@@ -2479,11 +2440,11 @@ export function SwiperaStudioWorkspace({
             />
           </div>
 
-          {/* 4. CAROUSEL STUDIO WORKSPACE (Create, Style, Design) */}
+          {/* 3. CAROUSEL STUDIO WORKSPACE (Create, Style, Design) */}
           <div
             className={cn(
               "flex-1 flex min-w-0 h-full overflow-hidden relative",
-              activeTab !== "ideas" && activeTab !== "videos" && activeTab !== "calendar" ? "flex" : "hidden"
+              activeTab !== "ideas" && activeTab !== "calendar" ? "flex" : "hidden"
             )}
           >
             {/* Left Tool Panel (340px) */}
@@ -2523,22 +2484,6 @@ export function SwiperaStudioWorkspace({
                             <div>
                               <div className="text-xs font-bold text-[var(--fg)]">Content Ideas Generator</div>
                               <div className="text-[10px] text-[var(--muted)]">Find viral angles & trends</div>
-                            </div>
-                          </div>
-                          <i className="fas fa-arrow-right text-xs text-[var(--muted)] group-hover:translate-x-1 transition-transform" />
-                        </div>
-
-                        <div
-                          onClick={() => handleNavSelect("videos")}
-                          className="p-3 rounded-xl border border-[var(--line)] bg-[var(--bg)] hover:border-[#c6f432] cursor-pointer transition-all flex items-center justify-between group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-600 dark:text-pink-400 flex items-center justify-center">
-                              <Video className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-[var(--fg)]">Video Studio & AI Shorts</div>
-                              <div className="text-[10px] text-[var(--muted)]">Create vertical video reels</div>
                             </div>
                           </div>
                           <i className="fas fa-arrow-right text-xs text-[var(--muted)] group-hover:translate-x-1 transition-transform" />

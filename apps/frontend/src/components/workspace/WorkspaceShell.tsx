@@ -48,8 +48,6 @@ export function WorkspaceShell({
   let mappedTab: StudioTab = "create";
   if (initialView === "ideas") {
     mappedTab = "ideas";
-  } else if (initialView === "videos") {
-    mappedTab = "videos";
   } else if (initialView === "calendar" || initialView === "schedule") {
     mappedTab = "calendar";
   } else if (initialView === "create") {
