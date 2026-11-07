@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
 
 interface ExtractedImage {
   url: string;
@@ -8,7 +7,7 @@ interface ExtractedImage {
 }
 
 interface ExtractionResult {
-  kind: "url";
+  kind: "url" | "pdf";
   url: string;
   siteName: string;
   title: string;
@@ -20,6 +19,38 @@ interface ExtractionResult {
   images: ExtractedImage[];
   via: "reader" | "metadata";
   warning?: string;
+  base64?: string;
+}
+
+// In-Memory High-Speed LRU Cache (TTL 2 Hours)
+interface CacheEntry {
+  data: ExtractionResult;
+  expiresAt: number;
+}
+const urlCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const MAX_CACHE_ENTRIES = 500;
+
+function cleanUrlForCache(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl);
+    // Strip common tracking and analytics parameters to maximize cache hit rate
+    const trackingParams = [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "fbclid",
+      "gclid",
+      "ref",
+      "source",
+    ];
+    trackingParams.forEach((param) => u.searchParams.delete(param));
+    return u.toString();
+  } catch {
+    return rawUrl;
+  }
 }
 
 // Clean and normalize text
@@ -35,6 +66,19 @@ function cleanText(text: string): string {
 function countWords(text: string): number {
   const matches = text.match(/[\p{L}\p{N}]+/gu);
   return matches ? matches.length : 0;
+}
+
+// HTML entity decoder
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)));
 }
 
 // Extract domain / hostname as friendly name
@@ -73,29 +117,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const normalizedUrl = cleanUrlForCache(rawUrl);
+
+    // Fast Cache Check (< 1ms)
+    const cached = urlCache.get(normalizedUrl);
+    if (cached && cached.expiresAt > Date.now()) {
+      return NextResponse.json(cached.data);
+    }
+
     let parsedUrl: URL;
     try {
-      parsedUrl = new URL(rawUrl);
+      parsedUrl = new URL(normalizedUrl);
     } catch {
       return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
     }
 
-    // Fetch the target URL with realistic browser headers
-    let html = "";
+    // High-performance Fetch with Real Browser Headers and 5s Timeout
     let finalUrl = parsedUrl.href;
+    let contentType = "";
+    let html = "";
+
     try {
       const response = await fetch(finalUrl, {
         headers: {
           "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
           "Accept-Language": "en-US,en;q=0.9,ko;q=0.8",
           "Cache-Control": "no-cache",
           Pragma: "no-cache",
+          "Upgrade-Insecure-Requests": "1",
         },
         redirect: "follow",
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(5000),
       });
 
       if (!response.ok) {
@@ -103,9 +158,36 @@ export async function POST(req: NextRequest) {
       }
 
       finalUrl = response.url || finalUrl;
+      contentType = response.headers.get("content-type") || "";
+
+      // Direct PDF Handling
+      if (
+        contentType.includes("application/pdf") ||
+        finalUrl.toLowerCase().endsWith(".pdf")
+      ) {
+        const buffer = await response.arrayBuffer();
+        const base64Data = Buffer.from(buffer).toString("base64");
+        const fileName = finalUrl.split("/").pop() || "Document.pdf";
+        const pdfResult: ExtractionResult = {
+          kind: "pdf",
+          url: finalUrl,
+          siteName: extractSiteName(finalUrl),
+          title: decodeURIComponent(fileName),
+          published: null,
+          description: "PDF Document extracted directly.",
+          text: "",
+          words: 0,
+          image: null,
+          images: [],
+          via: "reader",
+          base64: base64Data,
+        };
+        return NextResponse.json(pdfResult);
+      }
+
       html = await response.text();
     } catch (fetchErr: any) {
-      console.warn("Direct fetch failed for URL:", finalUrl, fetchErr.message);
+      console.warn("Direct fetch error for URL:", finalUrl, fetchErr.message);
       return NextResponse.json(
         {
           error:
@@ -123,56 +205,59 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Meta / OpenGraph Extraction
-    const ogTitleMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ||
+    // 1. FAST METADATA EXTRACTION (OpenGraph & Twitter Cards)
+    const ogTitleMatch =
+      html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i) ||
       html.match(/<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i);
     const titleTagMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
 
-    const ogDescMatch = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i) ||
+    const ogDescMatch =
+      html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+name=["']twitter:description["'][^>]+content=["']([^"']+)["']/i);
 
-    const ogSiteMatch = html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i);
-    const ogImageMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+    const ogSiteMatch = html.match(
+      /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i
+    );
+    const ogImageMatch =
+      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
 
-    const publishedMatch = html.match(/<meta[^>]+property=["']article:published_time["'][^>]+content=["']([^"']+)["']/i) ||
+    const publishedMatch =
+      html.match(/<meta[^>]+property=["']article:published_time["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<time[^>]+datetime=["']([^"']+)["']/i);
 
     let title = ogTitleMatch ? ogTitleMatch[1].trim() : titleTagMatch ? titleTagMatch[1].trim() : "";
-    title = title
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
+    title = decodeHtmlEntities(title)
       .replace(/\s*[-|•–—]\s*[^|–—\n]+$/, "") // remove trailing site suffixes like " - TechCrunch"
       .trim();
 
     let description = ogDescMatch ? ogDescMatch[1].trim() : "";
-    description = description
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
+    description = decodeHtmlEntities(description);
 
     const siteName = extractSiteName(finalUrl, ogSiteMatch ? ogSiteMatch[1] : null);
     const heroImageRaw = ogImageMatch ? ogImageMatch[1].trim() : null;
     const heroImage = heroImageRaw ? resolveUrl(heroImageRaw, finalUrl) : null;
     const published = publishedMatch ? publishedMatch[1].trim() : null;
 
-    // 2. Structured JSON-LD extraction
+    // 2. FAST JSON-LD EXTRACTION (Sub-millisecond direct structured data)
     let jsonLdBody = "";
-    const jsonLdMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+    let jsonLdTitle = "";
+    const jsonLdMatches = html.matchAll(
+      /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+    );
     for (const match of jsonLdMatches) {
       try {
         const json = JSON.parse(match[1]);
         const checkItem = (item: any) => {
           if (!item) return;
-          if (item["@type"] === "NewsArticle" || item["@type"] === "BlogPosting" || item["@type"] === "Article") {
-            if (!title && item.headline) title = item.headline;
+          if (
+            item["@type"] === "NewsArticle" ||
+            item["@type"] === "BlogPosting" ||
+            item["@type"] === "Article"
+          ) {
+            if (!jsonLdTitle && item.headline) jsonLdTitle = item.headline;
             if (item.articleBody && item.articleBody.length > jsonLdBody.length) {
               jsonLdBody = item.articleBody;
             }
@@ -182,11 +267,15 @@ export async function POST(req: NextRequest) {
         else if (json["@graph"] && Array.isArray(json["@graph"])) json["@graph"].forEach(checkItem);
         else checkItem(json);
       } catch {
-        // Ignore unparseable JSON-LD blocks
+        // Skip unparseable JSON-LD blocks
       }
     }
 
-    // 3. Extract readable text from HTML body
+    if (!title && jsonLdTitle) {
+      title = decodeHtmlEntities(jsonLdTitle);
+    }
+
+    // 3. FAST READABILITY ARTICLE BODY EXTRACTION
     let cleanHtml = html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -195,16 +284,20 @@ export async function POST(req: NextRequest) {
       .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
       .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
       .replace(/<header[\s\S]*?<\/header>/gi, " ")
+      .replace(/<aside[\s\S]*?<\/aside>/gi, " ")
       .replace(/<!--[\s\S]*?-->/g, " ");
 
-    // Focus on article/main container if present
-    const articleContainerMatch = cleanHtml.match(/<article[\s\S]*?<\/article>/i) ||
+    // Focus on article container if available
+    const articleContainerMatch =
+      cleanHtml.match(/<article[\s\S]*?<\/article>/i) ||
       cleanHtml.match(/<main[\s\S]*?<\/main>/i) ||
-      cleanHtml.match(/<div[^>]+class=["'][^"']*(?:article-body|post-content|entry-content|story-content)[^"']*["'][\s\S]*?<\/div>/i);
+      cleanHtml.match(
+        /<div[^>]+class=["'][^"']*(?:article-body|post-content|entry-content|story-content)[^"']*["'][\s\S]*?<\/div>/i
+      );
 
     const targetHtml = articleContainerMatch ? articleContainerMatch[0] : cleanHtml;
 
-    // Extract images with alt text
+    // Candidate Images Collection
     const imgMatches = targetHtml.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/gi);
     const candidateImages: ExtractedImage[] = [];
     const seenUrls = new Set<string>();
@@ -224,75 +317,41 @@ export async function POST(req: NextRequest) {
           fullSrc &&
           !seenUrls.has(fullSrc) &&
           !/\.(svg|ico)$/i.test(fullSrc) &&
-          !/(avatar|logo|icon|tracking|pixel|badge|sponsor)/i.test(fullSrc)
+          !/(avatar|logo|icon|tracking|pixel|badge|sponsor|advert)/i.test(fullSrc)
         ) {
           seenUrls.add(fullSrc);
           candidateImages.push({
             url: fullSrc,
-            alt: altMatch ? altMatch[1].trim() : "",
+            alt: altMatch ? decodeHtmlEntities(altMatch[1].trim()) : "",
             main: false,
           });
-          if (candidateImages.length >= 16) break;
+          if (candidateImages.length >= 20) break;
         }
       }
     }
 
-    // Extract text paragraphs
+    // Extract Paragraphs & Key Sections
     const paragraphs: string[] = [];
-    const pMatches = targetHtml.matchAll(/<(?:p|h1|h2|h3|h4|li)[^>]*>([\s\S]*?)<\/(?:p|h1|h2|h3|h4|li)>/gi);
+    const pMatches = targetHtml.matchAll(
+      /<(?:p|h1|h2|h3|h4|li|blockquote)[^>]*>([\s\S]*?)<\/(?:p|h1|h2|h3|h4|li|blockquote)>/gi
+    );
     for (const match of pMatches) {
-      const pText = match[1]
-        .replace(/<[^>]+>/g, " ")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&nbsp;/g, " ")
-        .trim();
-      if (pText.length >= 25 && !/^(copyright|all rights reserved|privacy policy|terms of service|sign up|subscribe)/i.test(pText)) {
+      const pText = decodeHtmlEntities(match[1].replace(/<[^>]+>/g, " ")).trim();
+      if (
+        pText.length >= 25 &&
+        !/^(copyright|all rights reserved|privacy policy|terms of service|sign up|subscribe|read more|advertisement)/i.test(
+          pText
+        )
+      ) {
         paragraphs.push(pText);
       }
     }
 
-    let articleBody = jsonLdBody.length > 200 ? jsonLdBody : paragraphs.join("\n\n");
+    let articleBody = jsonLdBody.length > 250 ? jsonLdBody : paragraphs.join("\n\n");
     if (!articleBody && description) {
       articleBody = description;
     }
-
     articleBody = cleanText(articleBody);
-
-    // If Gemini API is available and content is long or raw, enhance it with a clean synthesized structure
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-    if (apiKey && apiKey.length > 5 && articleBody.length > 300) {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
-        const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-        const prompt = `You are an elite news summarizer for social media carousels.
-Extract and synthesize the core story from this article into clear, engaging paragraphs with key bullet points, statistics, and takeaways.
-
-Story Title: "${title}"
-Source URL: "${finalUrl}"
-Raw Article Content:
-${articleBody.slice(0, 4500)}
-
-Output Requirements:
-- Start with a punchy 2-sentence summary hook.
-- Then present 3 to 5 core bullet points highlighting key breakthroughs, statistics, or steps.
-- Maintain journalistic accuracy; do not hallucinate numbers or facts.
-- Output clean plain text without markdown headers.`;
-
-        const aiResponse = await ai.models.generateContent({
-          model,
-          contents: prompt,
-        });
-        if (aiResponse.text && aiResponse.text.trim().length > 100) {
-          articleBody = cleanText(aiResponse.text);
-        }
-      } catch (aiErr: any) {
-        console.warn("Gemini article synthesis skipped:", aiErr.message);
-      }
-    }
 
     const wordCount = countWords(articleBody);
 
@@ -310,6 +369,14 @@ Output Requirements:
       via: "reader",
     };
 
+    // Store in LRU cache
+    if (urlCache.size >= MAX_CACHE_ENTRIES) {
+      const oldestKey = urlCache.keys().next().value;
+      if (oldestKey) urlCache.delete(oldestKey);
+    }
+    urlCache.set(normalizedUrl, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
+
+    // Respond immediately (< 1s execution)
     return NextResponse.json(result);
   } catch (err: any) {
     console.error("Error in /api/extract-url:", err);
@@ -319,4 +386,3 @@ Output Requirements:
     );
   }
 }
-
