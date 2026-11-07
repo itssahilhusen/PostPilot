@@ -55,12 +55,10 @@ export function WorkspaceShell({
     mappedTab = "calendar";
   } else if (initialView === "create" || initialView === "studio") {
     mappedTab = "create";
-  } else if (initialView === "templates" || initialView === "images" || initialView === "image" || initialView === "carousel") {
+  } else if (initialView === "templates" || initialView === "images" || initialView === "image" || initialView === "carousel" || initialView === "design") {
     mappedTab = "templates";
-  } else if (initialView === "design") {
-    mappedTab = "design";
   } else if (initialView === "brand") {
-    mappedTab = "brand";
+    mappedTab = "create";
   } else if (initialView === "caption") {
     mappedTab = "caption";
   } else {

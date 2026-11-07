@@ -310,17 +310,15 @@ export function SwiperaStudioWorkspace({
   const computeActiveTab = (): StudioTab => {
     const tabParam = searchParams?.get("tab");
     if (tabParam === "pipeline" || tabParam === "pipelines") return "pipeline";
+    if (tabParam === "ideas" || tabParam === "idea") return "ideas";
     if (tabParam === "create") return "create";
     if (tabParam === "templates" || tabParam === "styles" || tabParam === "style" || tabParam === "image") return "templates";
-    if (tabParam === "design") return "design";
-    if (tabParam === "brand") return "brand";
     if (tabParam === "caption") return "caption";
-    if (tabParam === "ideas" || tabParam === "idea") return "ideas";
     if (tabParam === "calendar" || tabParam === "schedule") return "calendar";
     if (pathname?.startsWith("/pipelines")) return "pipeline";
     if (pathname?.startsWith("/ideas")) return "ideas";
     if (pathname?.startsWith("/calendar") || pathname?.startsWith("/schedule")) return "calendar";
-    if (initialTab) return initialTab;
+    if (initialTab && initialTab !== "design" && initialTab !== "brand") return initialTab;
     return "create";
   };
 
@@ -1044,8 +1042,8 @@ export function SwiperaStudioWorkspace({
       console.warn("Faceless generation error, using fallback deck", e);
     } finally {
       setIsGenerating(false);
-      toast.success("Faceless Carousel ready for retouching in Design canvas!", { id: "faceless-gen" });
-      setActiveTab("design");
+      toast.success("Faceless Carousel ready in editor!", { id: "faceless-gen" });
+      setActiveTab("create");
     }
   };
 
@@ -2276,7 +2274,7 @@ export function SwiperaStudioWorkspace({
             className="w-16 shrink-0 border-r border-[var(--line)] bg-[var(--panel)] flex flex-col items-center py-3 gap-1 select-none z-20"
             data-purpose="studio-rail-navigation"
           >
-            {/* 0. Pipeline */}
+            {/* 1. Pipeline */}
             <button
               type="button"
               data-tab="pipeline"
@@ -2291,7 +2289,22 @@ export function SwiperaStudioWorkspace({
               <span>Pipeline</span>
             </button>
 
-            {/* 1. Create */}
+            {/* 2. Idea */}
+            <button
+              type="button"
+              data-tab="ideas"
+              onClick={() => handleNavSelect("ideas")}
+              className={cn(
+                "rail-btn cursor-pointer transition-all",
+                activeTab === "ideas" && "active"
+              )}
+              title="Find viral trends & content angles"
+            >
+              <i className="fas fa-lightbulb" />
+              <span>Idea</span>
+            </button>
+
+            {/* 3. Create */}
             <button
               type="button"
               data-tab="create"
@@ -2306,7 +2319,7 @@ export function SwiperaStudioWorkspace({
               <span>Create</span>
             </button>
 
-            {/* 2. Styles / Templates */}
+            {/* 4. Styles / Templates */}
             <button
               type="button"
               data-tab="templates"
@@ -2319,36 +2332,6 @@ export function SwiperaStudioWorkspace({
             >
               <i className="fas fa-palette" />
               <span>Styles</span>
-            </button>
-
-            {/* 3. Design */}
-            <button
-              type="button"
-              data-tab="design"
-              onClick={() => handleNavSelect("design")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "design" && "active"
-              )}
-              title="Typography, fonts, colors, and layout"
-            >
-              <i className="fas fa-pen-ruler" />
-              <span>Design</span>
-            </button>
-
-            {/* 4. Brand */}
-            <button
-              type="button"
-              data-tab="brand"
-              onClick={() => handleNavSelect("brand")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "brand" && "active"
-              )}
-              title="Social handles & brand identity"
-            >
-              <i className="fas fa-crown" />
-              <span>Brand</span>
             </button>
 
             {/* 5. Caption */}
@@ -2369,22 +2352,7 @@ export function SwiperaStudioWorkspace({
             {/* Divider */}
             <div className="w-8 h-px bg-[var(--line)] my-1.5 shrink-0" />
 
-            {/* Extended Suite: Idea */}
-            <button
-              type="button"
-              data-tab="ideas"
-              onClick={() => handleNavSelect("ideas")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "ideas" && "active"
-              )}
-              title="Find viral trends & content angles"
-            >
-              <i className="fas fa-lightbulb" />
-              <span>Idea</span>
-            </button>
-
-            {/* Extended Suite: Calendar */}
+            {/* 6. Calendar (Last) */}
             <button
               type="button"
               data-tab="calendar"
