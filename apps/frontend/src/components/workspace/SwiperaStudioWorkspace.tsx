@@ -317,11 +317,11 @@ export function SwiperaStudioWorkspace({
     if (tabParam === "caption") return "caption";
     if (tabParam === "ideas" || tabParam === "idea") return "ideas";
     if (tabParam === "calendar" || tabParam === "schedule") return "calendar";
-    if (pathname === "/" || pathname?.startsWith("/pipelines") || pathname?.startsWith("/dashboard")) return "pipeline";
+    if (pathname?.startsWith("/pipelines")) return "pipeline";
     if (pathname?.startsWith("/ideas")) return "ideas";
     if (pathname?.startsWith("/calendar") || pathname?.startsWith("/schedule")) return "calendar";
     if (initialTab) return initialTab;
-    return "pipeline";
+    return "create";
   };
 
   const [activeTab, setActiveTab] = useState<StudioTab>(computeActiveTab);
@@ -1334,7 +1334,7 @@ export function SwiperaStudioWorkspace({
   useEffect(() => {
     const handlePopState = () => {
       const p = window.location.pathname;
-      if (p === "/" || p.startsWith("/pipelines") || p.startsWith("/dashboard")) setActiveTab("pipeline");
+      if (p.startsWith("/pipelines")) setActiveTab("pipeline");
       else if (p.startsWith("/ideas")) setActiveTab("ideas");
       else if (p.startsWith("/calendar") || p.startsWith("/schedule")) setActiveTab("calendar");
       else setActiveTab("create");

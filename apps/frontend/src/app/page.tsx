@@ -1,8 +1,13 @@
-"use client";
-
 import React from "react";
-import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import SwiperaLanding from "@/components/swipera/SwiperaLanding";
 
 export default function Home() {
-  return <WorkspaceShell initialView="pipelines" />;
+  return (
+    <>
+      <link rel="stylesheet" href="/swipera/landing.css" />
+      <link rel="stylesheet" href="/swipera/templates.css" />
+      <SwiperaLanding />
+    </>
+  );
 }
+

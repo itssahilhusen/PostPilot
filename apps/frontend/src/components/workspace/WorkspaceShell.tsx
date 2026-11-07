@@ -4,9 +4,9 @@ import React from "react";
 import { SwiperaStudioWorkspace, StudioTab } from "./SwiperaStudioWorkspace";
 
 export type WorkspaceTab =
-  | "pipelines"
   | "studio"
   | "ideas"
+  | "videos"
   | "create"
   | "templates"
   | "design"
@@ -17,12 +17,19 @@ export type WorkspaceTab =
   | "personas"
   | "analytics"
   | "accounts"
+  | "spy"
+  | "pipelines"
   | "carousel"
   | "images"
   | "image"
   | "schedule"
   | "publish"
+  | "conversations"
   | "media-library"
+  | "engagement-automation"
+  | "affiliate"
+  | "guide"
+  | "support"
   | "settings";
 
 interface WorkspaceShellProps {
@@ -33,12 +40,12 @@ interface WorkspaceShellProps {
 }
 
 export function WorkspaceShell({
-  initialView = "pipelines",
+  initialView = "studio",
   children,
   showAuthModal = false,
   authModalMode = "signup",
 }: WorkspaceShellProps) {
-  let mappedTab: StudioTab = "pipeline";
+  let mappedTab: StudioTab = "create";
 
   if (initialView === "pipelines") {
     mappedTab = "pipeline";
@@ -57,7 +64,7 @@ export function WorkspaceShell({
   } else if (initialView === "caption") {
     mappedTab = "caption";
   } else {
-    mappedTab = "pipeline";
+    mappedTab = "create";
   }
 
   return (
