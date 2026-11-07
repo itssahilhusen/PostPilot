@@ -1,0 +1,22 @@
+{
+  "name": "@reerts/orchestrator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@reerts/database": "workspace:*",
+    "@reerts/integrations": "workspace:*",
+    "@reerts/helpers": "workspace:*",
+    "bullmq": "^5.10.0",
+    "ioredis": "^5.3.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}
+

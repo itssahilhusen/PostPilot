@@ -1,0 +1,47 @@
+# Development Docker Compose Stack for Reerts
+services:
+  reerts-postgres:
+    image: postgres:16-alpine
+    container_name: reerts-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: reerts
+      POSTGRES_PASSWORD: reerts_password
+      POSTGRES_DB: reerts_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - reerts-pgdata:/var/lib/postgresql/data
+    networks:
+      - reerts-network
+
+  reerts-redis:
+    image: redis:7-alpine
+    container_name: reerts-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - reerts-redisdata:/data
+    networks:
+      - reerts-network
+
+  reerts-redisinsight:
+    image: redis/redisinsight:latest
+    container_name: reerts-redisinsight
+    restart: always
+    ports:
+      - "5540:5540"
+    depends_on:
+      - reerts-redis
+    networks:
+      - reerts-network
+
+volumes:
+  reerts-pgdata:
+  reerts-redisdata:
+
+networks:
+  reerts-network:
+    driver: bridge
+

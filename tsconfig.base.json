@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": ".",
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "sourceMap": true,
+    "declaration": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "paths": {
+      "@reerts/frontend/*": ["apps/frontend/src/*"],
+      "@reerts/backend/*": ["apps/backend/src/*"],
+      "@reerts/orchestrator/*": ["apps/orchestrator/src/*"],
+      "@reerts/extension/*": ["apps/extension/src/*"],
+      "@reerts/commands/*": ["apps/commands/src/*"],
+      "@reerts/database/*": ["libraries/database/src/*"],
+      "@reerts/database": ["libraries/database/src/index.ts"],
+      "@reerts/integrations/*": ["libraries/integrations/src/*"],
+      "@reerts/integrations": ["libraries/integrations/src/index.ts"],
+      "@reerts/helpers/*": ["libraries/helpers/src/*"],
+      "@reerts/helpers": ["libraries/helpers/src/index.ts"],
+      "@reerts/react/*": ["libraries/react-shared-libraries/src/*"],
+      "@reerts/react": ["libraries/react-shared-libraries/src/index.ts"],
+      "@/*": ["apps/frontend/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next"]
+}

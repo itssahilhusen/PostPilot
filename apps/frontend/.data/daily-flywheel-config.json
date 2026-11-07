@@ -1,0 +1,36 @@
+{
+  "id": "flywheel_default",
+  "workspaceId": "workspace_default",
+  "enabled": false,
+  "niche": "tech_ai",
+  "nicheLabel": "Tech & AI Breakthroughs",
+  "preferredTheme": "futuretech",
+  "brandHandle": "@theaiseed",
+  "feedSources": [
+    "tldr_ai",
+    "tldr_tech",
+    "techcrunch_ai"
+  ],
+  "scheduleTime": "10:00",
+  "targetPlatforms": [
+    "instagram",
+    "x",
+    "linkedin",
+    "threads"
+  ],
+  "notificationChannel": "discord",
+  "webhookUrl": "",
+  "requireApproval": true,
+  "autoScheduleOnApproval": true,
+  "lastRunAt": null,
+  "lastRunStatus": null,
+  "lastRunPostId": null,
+  "totalPostsGenerated": 0,
+  "styleMemory": {
+    "detectedNiche": "Tech & AI Breakthroughs",
+    "postCountInNiche": 2,
+    "favoriteTemplate": "brutalism",
+    "promptToAutomateShown": true,
+    "userAcceptedAutomation": false
+  }
+}

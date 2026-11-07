@@ -1,0 +1,349 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String   @default("My Workspace")
+  handle      String   @unique @default("my-workspace")
+  timezone    String   @default("Asia/Calcutta")
+  plan        String   @default("Pro") // Free, Creator, Pro, Agency
+  creditsUsed Int      @default(111)
+  creditsMax  Int      @default(500)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  accounts    SocialAccount[]
+  posts       Post[]
+  brandVoices BrandVoice[]
+  ideas       Idea[]
+  carousels   Carousel[]
+  automations Automation[]
+  mediaAssets MediaAsset[]
+  competitors Competitor[]
+  leads       Lead[]
+  personas    Persona[]
+}
+
+model User {
+  id            String     @id @default(cuid())
+  workspaceId   String?
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  name          String?
+  email         String?    @unique
+  emailVerified DateTime?
+  password      String?
+  role          String     @default("OWNER") // OWNER, ADMIN, MEMBER, CLIENT
+  image         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+
+  @@index([workspaceId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model SocialAccount {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider     String    // "x", "linkedin", "instagram", "threads", "tiktok", "facebook", "youtube"
+  name         String
+  handle       String
+  avatar       String?
+  status       String    @default("active") // "active", "updating", "sync_failed"
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  metadata     String?   @default("{}") // JSON string for followers, metrics
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  personas     Persona[]
+
+  @@unique([workspaceId, provider, handle])
+}
+
+model Post {
+  id            String        @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title         String
+  content       String        // Primary post or thread 1 body
+  rawThreads    String        @default("[]") // JSON string of thread items
+  mediaUrls     String        @default("[]") // JSON string array of media urls
+  platforms     String        @default("[\"x\",\"linkedin\"]") // JSON array of platform ids
+  status        String        @default("DRAFT") // DRAFT, SCHEDULED, PUBLISHED, FAILED
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  failureReason String?
+  impressions   Int           @default(0)
+  engagements   Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  variants      PostVariant[]
+
+  @@index([workspaceId, status])
+  @@index([scheduledAt])
+}
+
+model PostVariant {
+  id             String    @id @default(cuid())
+  postId         String
+  post           Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  platform       String    // "x", "linkedin", "threads", "instagram", "tiktok"
+  tailoredText   String
+  externalPostId String?
+  status         String    @default("PENDING") // PENDING, PUBLISHED, FAILED
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([postId])
+}
+
+model BrandVoice {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String    @default("Alex Rivers - AI Tech Founder")
+  formality      Int       @default(30)
+  directness     Int       @default(85)
+  humor          Int       @default(45)
+  targetAudience String    @default("Founders, creators, and engineers looking to scale.")
+  bannedWords    String    @default("delve, tapestry, synergy, revolutionize, unleash")
+  isDefault      Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([workspaceId])
+}
+
+model Idea {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title           String
+  excerpt         String?
+  sourceType      String    @default("AI") // "Web", "YouTube", "News", "X Viral", "Reddit"
+  viralityScore   Int       @default(95)
+  tags            String    @default("[]") // JSON array of tag strings
+  convertedPostId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([workspaceId])
+}
+
+model Carousel {
+  id          String          @id @default(cuid())
+  workspaceId String
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  theme       String          @default("dark") // "dark", "gradient", "minimal"
+  sourceUrl   String?
+  aspectRatio String          @default("4:5")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  slides      CarouselSlide[]
+
+  @@index([workspaceId])
+}
+
+model CarouselSlide {
+  id         String   @id @default(cuid())
+  carouselId String
+  carousel   Carousel @relation(fields: [carouselId], references: [id], onDelete: Cascade)
+  order      Int      // 1, 2, 3...
+  slideType  String   @default("CONTENT") // "COVER", "PROBLEM", "CONTENT", "COMPARISON", "CLOSING"
+  headline   String
+  body       String
+  tag        String?
+  bgGradient String?
+  imageUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([carouselId])
+}
+
+model Automation {
+  id             String          @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String          @default("Lead DM Campaign")
+  active         Boolean         @default(true)
+  triggerType    String          @default("comment") // "comment", "dm"
+  targetPostId   String?
+  keywords       String          @default("price, link, guide")
+  actionType     String          @default("dm")
+  dmContent      String
+  buttonLabel    String?         @default("Get the link")
+  buttonUrl      String?         @default("https://reerts.in")
+  replyVariants  String          @default("[\"Sent you a DM! Check your inbox 😊\"]")
+  requireFollow  Boolean         @default(false)
+  followGateText String?
+  captureEmail   Boolean         @default(false)
+  emailGateText  String?
+  sentCount      Int             @default(0)
+  clicksCount    Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  logs           AutomationLog[]
+
+  @@index([workspaceId])
+}
+
+model Lead {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  username    String
+  platform    String    @default("instagram")
+  email       String?
+  followed    Boolean   @default(false)
+  status      String    @default("CONTACTED") // "CONTACTED", "CONVERTED", "OPTED_OUT"
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+}
+
+model AutomationLog {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  username     String
+  triggerEvent String
+  outcome      String
+  createdAt    DateTime   @default(now())
+
+  @@index([automationId])
+}
+
+model Competitor {
+  id          String           @id @default(cuid())
+  workspaceId String
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  platform    String           // "threads", "tiktok", "x"
+  handle      String
+  name        String
+  avatar      String?
+  followers   Int              @default(0)
+  growthRate  String           @default("+5.4%")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  posts       CompetitorPost[]
+
+  @@index([workspaceId])
+}
+
+model CompetitorPost {
+  id           String     @id @default(cuid())
+  competitorId String
+  competitor   Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  content      String
+  likes        Int        @default(0)
+  replies      Int        @default(0)
+  shares       Int        @default(0)
+  postedAt     DateTime   @default(now())
+  remixed      Boolean    @default(false)
+
+  @@index([competitorId])
+}
+
+model MediaAsset {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  url         String
+  mimeType    String    @default("image/png")
+  sizeBytes   Int       @default(0)
+  folder      String    @default("default")
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+}
+
+model Persona {
+  id                               String         @id @default(cuid())
+  workspaceId                      String
+  workspace                        Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  socialAccountId                  String?
+  socialAccount                    SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  blogAccountId                    String?
+
+  personaNumber                    Int            @default(0) // 0: Slot A, 1: Slot B
+  name                             String         @default("Brand Voice")
+  status                           String         @default("active") // "active", "analyzing", "failed"
+  analysisMethod                   String         @default("myAccount") // "myAccount", "reference", "load", "aiGenerate"
+  analyzedPostsCount               Int            @default(0)
+  analyzedAt                       DateTime?      @default(now())
+  language                         String         @default("en")
+  contentLanguage                  String         @default("en")
+  sentenceStructureKeepOriginal     Boolean        @default(false)
+
+  // Structured Voice Analysis Sections
+  profileIdentity                  String?        @db.Text
+  targetAudience                   String?        @default("{}") // JSON: demographic_profile, follow_motivation, audience_needs, implicit_promise
+  hookSetting                      String?        @default("{}") // JSON: top_patterns, hook_tone, notable_techniques, avg_hook_length
+  writingStyleAnalysis             String?        @default("{}") // JSON: title_format, sentence_structure, thought_development, ending_signatures, emotional_distance, humor_and_personality
+  ctaSetting                       String?        @default("{\"items\":[]}") // JSON: array of { type, instruction, examples }
+  referenceLinkSetting             String?        @default("{\"enabled\":false,\"format\":\"\",\"placement_note\":null}") // JSON
+  coreTopics                       String?        @default("[]") // JSON: string[]
+  topPerformingPatterns            String?        @db.Text
+  additionalInstructions           String?        @db.Text
+
+  createdAt                        DateTime       @default(now())
+  updatedAt                        DateTime       @updatedAt
+
+  @@index([workspaceId])
+  @@index([socialAccountId])
+}

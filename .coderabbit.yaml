@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+tone_instructions: "Provide friendly, constructive, and actionable feedback focusing on code quality, performance, and modern Next.js/React best practices."
+early_access: true
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  high_level_summary_in_walkthrough: true
+  auto_title_placeholder: "@coderabbitai"
+  review_status: true
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  poem: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/.next/**"
+    - "!**/package-lock.json"
+    - "!**/*.lock"
+    - "!**/dist/**"
+    - "!**/.vercel/**"
+
+  instructions: |
+    - Project Stack: Next.js 14+ (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase / PostgreSQL.
+    - Ensure React Client Components properly declare `'use client'` when using hooks, state, or browser APIs.
+    - Validate proper TypeScript typings and avoid unnecessary `any`.
+    - Check for memory leaks or uncleaned event listeners/timers in React `useEffect` hooks.
+    - Keep styling consistent with Tailwind CSS utility classes and design tokens.
+    - Verify secure API route handlers (proper authentication, validation, and error handling).
+
+chat:
+  auto_reply: true
+
