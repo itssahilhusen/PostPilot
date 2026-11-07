@@ -134,7 +134,7 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
       {
         id: "seed_3",
         title: "Building in Public: Week 42 Growth Sprint",
-        content: "Over the last 7 days we crossed $24k ARR and shipped video rendering with Remotion. Here is our exact marketing checklist.",
+        content: "Over the last 7 days we scaled autonomous Instagram carousels with Gemini Flash and Sharp rendering. Here is our exact marketing checklist.",
         status: "PUBLISHED",
         platforms: ["x", "threads"],
         publishedAt: makeDate(-2, 9, 0),
@@ -144,10 +144,10 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
       },
       {
         id: "seed_4",
-        title: "Behind the Scenes: AI Video Subtitle Engine",
-        content: "Automated subtitle sync with Groq Whisper and Remotion Canvas. Full source code walkthrough dropping this afternoon.",
+        title: "Behind the Scenes: AI Carousel Automation Engine",
+        content: "Autonomous carousel generation with Gemini 3.8 Flash and Sharp compositor. Full pipeline walkthrough dropping this afternoon.",
         status: "SCHEDULED",
-        platforms: ["youtube", "tiktok", "instagram"],
+        platforms: ["instagram", "linkedin"],
         scheduledAt: makeDate(2, 17, 30),
       },
       {

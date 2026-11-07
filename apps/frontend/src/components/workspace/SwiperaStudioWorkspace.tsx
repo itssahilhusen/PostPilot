@@ -70,12 +70,13 @@ import { IdeasView } from "./IdeasView";
 import { CalendarView } from "./CalendarView";
 import { DailyFlywheelModal } from "./DailyFlywheelModal";
 import { DailyFlywheelAlertBanner } from "./DailyFlywheelAlertBanner";
+import { AutomationPipelineView } from "./AutomationPipelineView";
 
 const ComposerSheet = dynamic(() => import("./ComposerSheet").then((mod) => mod.ComposerSheet));
 const AuthForm = dynamic(() => import("@/components/auth/AuthForm").then((mod) => mod.AuthForm));
 
 // Strict rail navigation for PostPilot Carousel Studio
-export type StudioTab = "create" | "templates" | "design" | "brand" | "caption" | "ideas" | "calendar";
+export type StudioTab = "pipeline" | "create" | "templates" | "design" | "brand" | "caption" | "ideas" | "calendar";
 
 export interface SlideData {
   id: string;
@@ -308,6 +309,7 @@ export function SwiperaStudioWorkspace({
   // Determine initial active tab based on query param or pathname
   const computeActiveTab = (): StudioTab => {
     const tabParam = searchParams?.get("tab");
+    if (tabParam === "pipeline" || tabParam === "pipelines") return "pipeline";
     if (tabParam === "create") return "create";
     if (tabParam === "templates" || tabParam === "styles" || tabParam === "style" || tabParam === "image") return "templates";
     if (tabParam === "design") return "design";
@@ -315,10 +317,11 @@ export function SwiperaStudioWorkspace({
     if (tabParam === "caption") return "caption";
     if (tabParam === "ideas" || tabParam === "idea") return "ideas";
     if (tabParam === "calendar" || tabParam === "schedule") return "calendar";
+    if (pathname === "/" || pathname?.startsWith("/pipelines") || pathname?.startsWith("/dashboard")) return "pipeline";
     if (pathname?.startsWith("/ideas")) return "ideas";
     if (pathname?.startsWith("/calendar") || pathname?.startsWith("/schedule")) return "calendar";
     if (initialTab) return initialTab;
-    return "create";
+    return "pipeline";
   };
 
   const [activeTab, setActiveTab] = useState<StudioTab>(computeActiveTab);
@@ -1316,7 +1319,9 @@ export function SwiperaStudioWorkspace({
   const handleNavSelect = (tab: StudioTab) => {
     setActiveTab(tab);
     const targetPath =
-      tab === "ideas"
+      tab === "pipeline"
+        ? "/pipelines"
+        : tab === "ideas"
         ? "/ideas"
         : tab === "calendar"
         ? "/calendar"
@@ -1329,9 +1334,10 @@ export function SwiperaStudioWorkspace({
   useEffect(() => {
     const handlePopState = () => {
       const p = window.location.pathname;
-      if (p.startsWith("/ideas")) setActiveTab("ideas");
+      if (p === "/" || p.startsWith("/pipelines") || p.startsWith("/dashboard")) setActiveTab("pipeline");
+      else if (p.startsWith("/ideas")) setActiveTab("ideas");
       else if (p.startsWith("/calendar") || p.startsWith("/schedule")) setActiveTab("calendar");
-      else setActiveTab("templates");
+      else setActiveTab("create");
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -2270,6 +2276,21 @@ export function SwiperaStudioWorkspace({
             className="w-16 shrink-0 border-r border-[var(--line)] bg-[var(--panel)] flex flex-col items-center py-3 gap-1 select-none z-20"
             data-purpose="studio-rail-navigation"
           >
+            {/* 0. Pipeline */}
+            <button
+              type="button"
+              data-tab="pipeline"
+              onClick={() => handleNavSelect("pipeline")}
+              className={cn(
+                "rail-btn cursor-pointer transition-all",
+                activeTab === "pipeline" && "active"
+              )}
+              title="Social Media Automation Engine Pipeline"
+            >
+              <i className="fas fa-bolt" />
+              <span>Pipeline</span>
+            </button>
+
             {/* 1. Create */}
             <button
               type="button"
@@ -2398,11 +2419,28 @@ export function SwiperaStudioWorkspace({
 
           {/* =========================================================================
               2.2 WORKSPACE CONTENT - Zero-Flicker Multi-View Preservation
+              - Automation Pipeline Workspace
               - Ideas Workspace
-              - Videos Workspace
               - Calendar Workspace
               - Carousel Studio Workspace (Create / Style / Design)
               ========================================================================= */}
+          {/* 0. AUTOMATION PIPELINE WORKSPACE */}
+          <div
+            className={cn(
+              "flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[var(--bg)]",
+              activeTab === "pipeline" ? "flex" : "hidden"
+            )}
+          >
+            <AutomationPipelineView
+              onOpenStudioWithDeck={(deck) => {
+                if (deck && Array.isArray(deck.slides)) {
+                  setSlides(deck.slides);
+                  setActiveTab("create");
+                }
+              }}
+            />
+          </div>
+
           {/* 1. IDEAS WORKSPACE */}
           <div
             className={cn(
@@ -2444,7 +2482,7 @@ export function SwiperaStudioWorkspace({
           <div
             className={cn(
               "flex-1 flex min-w-0 h-full overflow-hidden relative",
-              activeTab !== "ideas" && activeTab !== "calendar" ? "flex" : "hidden"
+              activeTab !== "pipeline" && activeTab !== "ideas" && activeTab !== "calendar" ? "flex" : "hidden"
             )}
           >
             {/* Left Tool Panel (340px) */}

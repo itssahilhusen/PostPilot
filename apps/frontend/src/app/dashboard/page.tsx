@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { RaycallDashboard } from "@/components/dashboard/RaycallDashboard";
+import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
 
 export default function DashboardPage() {
-  return <RaycallDashboard />;
+  return <WorkspaceShell initialView="pipelines" />;
 }

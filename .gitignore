@@ -1,13 +1,13 @@
 # Next.js & Build Artifacts
 .vercel
-node_modules
-.pnpm-store
-.turbo
-.next
-.next-build
-out
-dist
-build
+node_modules/
+.pnpm-store/
+.turbo/
+.next/
+.next-build/
+out/
+dist/
+build/
 *.tsbuildinfo
 bin/
 **/bin/
@@ -15,6 +15,16 @@ bin/
 storage/
 public/uploads/
 apps/frontend/public/uploads/
+uploads/
+.cache/
+coverage/
+.nyc_output/
+.eslintcache
+.stylelintcache
+playwright-report/
+test-results/
+cypress/videos/
+cypress/screenshots/
 
 # Compressed Archives & Backups
 *.zip
@@ -23,6 +33,8 @@ apps/frontend/public/uploads/
 *.tgz
 *.rar
 *.7z
+*.bak
+*.backup
 
 # AI Studio & Agent Tool Artifacts
 metadata.json
@@ -30,18 +42,39 @@ metadata.json
 .antigravity/
 public/assets/aistudio/
 
-# Secrets & Environment Variables
+# Secrets, Private Keys & Environment Variables
 .env
 .env.*
 .env.local
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 !.env.example
 *.pem
 *.key
 *.cert
+*.crt
+*.pfx
+*.p12
+*.csr
 *credential*.json
 *secret*.json
+service-account*.json
+firebase-adminsdk*.json
+private-key*.json
+id_rsa*
+id_ed25519*
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+logs/
 
 # Database Dumps, Caches & Local Store Data
 *.sql
@@ -49,6 +82,9 @@ public/assets/aistudio/
 *.sqlite
 *.sqlite3
 *.db
+*.db-journal
+*.db-shm
+*.db-wal
 *.cache.json
 prisma/*_cache.json
 **/*-store.json
@@ -60,8 +96,22 @@ prisma/*_cache.json
 # OS & Editor Files
 .DS_Store
 Thumbs.db
+ehthumbs.db
+desktop.ini
 .vscode/
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.sublime-workspace
+*.sublime-project
+temp/
+tmp/
+
+# Deprecated / Unused Reference Directories
+swipera_ref/
 
 # ==============================================================================
 # Reverse Engineering (REA) Artifacts (https://github.com/morluto/rea)

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSavedBrandKit, saveBrandKit } from "@/lib/video-projects-store";
-import { DEFAULT_BRAND_KIT } from "@/data/videoTemplates";
+import { getSavedBrandKit, saveBrandKit, DEFAULT_BRAND_KIT } from "@/lib/brand-kit-store";
 
 export async function GET() {
   try {
@@ -20,4 +19,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-

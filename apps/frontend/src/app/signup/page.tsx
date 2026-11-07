@@ -3,14 +3,14 @@ import { Metadata } from "next";
 import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
 
 export const metadata: Metadata = {
-  title: "Sign up — Reerts",
-  description: "Sign up with email or Google to Reerts.",
+  title: "Create Account — PostPilot",
+  description: "Create your PostPilot automation workspace.",
 };
 
-export default function SignUpPage() {
+export default function SignupPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-background" />}>
-      <WorkspaceShell initialView="conversations" showAuthModal={true} authModalMode="signup" />
+      <WorkspaceShell initialView="pipelines" showAuthModal={true} authModalMode="signup" />
     </Suspense>
   );
 }

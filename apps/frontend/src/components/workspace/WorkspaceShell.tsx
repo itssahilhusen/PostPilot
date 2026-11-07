@@ -4,9 +4,9 @@ import React from "react";
 import { SwiperaStudioWorkspace, StudioTab } from "./SwiperaStudioWorkspace";
 
 export type WorkspaceTab =
+  | "pipelines"
   | "studio"
   | "ideas"
-  | "videos"
   | "create"
   | "templates"
   | "design"
@@ -17,19 +17,12 @@ export type WorkspaceTab =
   | "personas"
   | "analytics"
   | "accounts"
-  | "spy"
-  | "pipelines"
   | "carousel"
   | "images"
   | "image"
   | "schedule"
   | "publish"
-  | "conversations"
   | "media-library"
-  | "engagement-automation"
-  | "affiliate"
-  | "guide"
-  | "support"
   | "settings";
 
 interface WorkspaceShellProps {
@@ -40,17 +33,20 @@ interface WorkspaceShellProps {
 }
 
 export function WorkspaceShell({
-  initialView = "studio",
+  initialView = "pipelines",
   children,
   showAuthModal = false,
   authModalMode = "signup",
 }: WorkspaceShellProps) {
-  let mappedTab: StudioTab = "create";
-  if (initialView === "ideas") {
+  let mappedTab: StudioTab = "pipeline";
+
+  if (initialView === "pipelines") {
+    mappedTab = "pipeline";
+  } else if (initialView === "ideas") {
     mappedTab = "ideas";
   } else if (initialView === "calendar" || initialView === "schedule") {
     mappedTab = "calendar";
-  } else if (initialView === "create") {
+  } else if (initialView === "create" || initialView === "studio") {
     mappedTab = "create";
   } else if (initialView === "templates" || initialView === "images" || initialView === "image" || initialView === "carousel") {
     mappedTab = "templates";
@@ -61,11 +57,11 @@ export function WorkspaceShell({
   } else if (initialView === "caption") {
     mappedTab = "caption";
   } else {
-    mappedTab = "create";
+    mappedTab = "pipeline";
   }
 
   return (
-    <React.Suspense fallback={<div className="h-screen w-full bg-[var(--bg)]" />}>
+    <React.Suspense fallback={<div className="h-screen w-full bg-[var(--bg,#0a0a0c)]" />}>
       <SwiperaStudioWorkspace
         initialTab={mappedTab}
         showAuthModal={showAuthModal}
@@ -74,3 +70,4 @@ export function WorkspaceShell({
     </React.Suspense>
   );
 }
+export default WorkspaceShell;
