@@ -65,6 +65,9 @@ import { SWIPERA_TEMPLATE_PREVIEWS } from "@/data/swiperaTemplatePreviews";
 import swiperaFontsData from "@/data/swiperaFonts";
 import swiperaPlatformsData from "@/data/swiperaPlatforms";
 import { swiperaExamplesData, swiperaExampleCategories } from "@/data/swiperaExamples";
+import { ExampleGalleryModal } from "./ExampleGalleryModal";
+import { SlidePropertiesInspector } from "./SlidePropertiesInspector";
+import { SlideCanvasRenderer } from "./SlideCanvasRenderer";
 
 import { IdeasView } from "./IdeasView";
 import { CalendarView } from "./CalendarView";
@@ -80,7 +83,7 @@ export type StudioTab = "pipeline" | "create" | "templates" | "design" | "brand"
 
 export interface SlideData {
   id: string;
-  type: "cover" | "content" | "list" | "quote" | "stat" | "cta";
+  type: "cover" | "content" | "list" | "quote" | "stat" | "chart" | "table" | "cta";
   label?: string;
   emoji?: string;
   title: string;
@@ -90,6 +93,54 @@ export interface SlideData {
   image?: string;
   imageFit?: "cover" | "contain";
   showOverlay?: boolean;
+  // Image Layout, Filters, and Positioning
+  imgLayout?: "auto" | "full" | "top" | "bottom" | "left" | "right" | "card" | "circle" | "polaroid";
+  imgSize?: number;
+  imgFit?: "cover" | "contain";
+  imgFocusX?: number;
+  imgFocusY?: number;
+  imgZoom?: number;
+  imgFilter?: "auto" | "none" | "mono" | "duotone" | "warm" | "cool" | "fade" | "vivid" | "film" | "soft";
+  imgBrightness?: number;
+  imgContrast?: number;
+  imgSaturate?: number;
+  imgBlur?: number;
+  imgOverlay?: "auto" | "none" | "dark" | "light" | "grad-b" | "grad-t" | "accent" | "accent-grad";
+  imgOverlayOpacity?: number;
+  imgRadius?: number;
+  imgShadow?: boolean;
+  imgBorder?: boolean;
+  imgFlip?: boolean;
+  imgTextPos?: "auto" | "top" | "middle" | "bottom";
+  // Chart and Table structured properties
+  chart?: {
+    kind: "bar" | "hbar" | "line" | "donut";
+    unit?: string;
+    items: Array<{ label: string; value: number }>;
+  };
+  table?: {
+    cols: string[];
+    rows: string[][];
+  };
+  // Layers (stickers, shapes, text layers)
+  layers?: Array<{
+    id: string;
+    kind: "text" | "emoji" | "image" | "shape";
+    text?: string;
+    src?: string;
+    shape?: string;
+    x: number;
+    y: number;
+    w: number;
+    h?: number;
+    rot?: number;
+    color?: string;
+    opacity?: number;
+    size?: number;
+    weight?: string;
+    bg?: string;
+    radius?: number;
+  }>;
 }
 
 export interface CompatiblePlatformInfo {
@@ -119,6 +170,7 @@ export interface UploadedSocialImage {
 export interface ExtractedSourceData {
   kind: "url" | "file";
   url?: string;
+  domain?: string;
   siteName?: string;
   title?: string;
   published?: string | null;
@@ -351,60 +403,88 @@ export function SwiperaStudioWorkspace({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("brutalism");
   const [selectedSchemeIndex, setSelectedSchemeIndex] = useState(0);
   const [aspectRatio, setAspectRatio] = useState<"4:5" | "1:1" | "9:16" | "16:9">("4:5");
+  const [zoomLevel, setZoomLevel] = useState(100);
 
-  // Exact native dimensions & display geometry matching Swipera
+  // Canvas Stage dynamic measurement
+  const canvasStageRef = useRef<HTMLDivElement>(null);
+  const [stageSize, setStageSize] = useState<{ width: number; height: number }>({ width: 800, height: 600 });
+
+  useEffect(() => {
+    const el = canvasStageRef.current;
+    if (!el) return;
+    const updateSize = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setStageSize({ width: rect.width, height: rect.height });
+      }
+    };
+    updateSize();
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setStageSize({ width, height });
+        }
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Exact native dimensions & responsive display geometry matching Swipera
   const ratioGeometry = useMemo(() => {
+    let nativeW = 1080;
+    let nativeH = 1350;
+    let ratioStr = "4:5";
+
     switch (aspectRatio) {
-      case "4:5":
-        return {
-          nativeW: 1080,
-          nativeH: 1350,
-          displayW: 400,
-          displayH: 500,
-          scale: 500 / 1350,
-          ratioStr: "4:5",
-        };
       case "1:1":
-        return {
-          nativeW: 1080,
-          nativeH: 1080,
-          displayW: 460,
-          displayH: 460,
-          scale: 460 / 1080,
-          ratioStr: "1:1",
-        };
+        nativeW = 1080;
+        nativeH = 1080;
+        ratioStr = "1:1";
+        break;
       case "9:16":
-        return {
-          nativeW: 1080,
-          nativeH: 1920,
-          displayW: 298,
-          displayH: 530,
-          scale: 530 / 1920,
-          ratioStr: "9:16",
-        };
+        nativeW = 1080;
+        nativeH = 1920;
+        ratioStr = "9:16";
+        break;
       case "16:9":
-        return {
-          nativeW: 1920,
-          nativeH: 1080,
-          displayW: 560,
-          displayH: 315,
-          scale: 560 / 1920,
-          ratioStr: "16:9",
-        };
+        nativeW = 1920;
+        nativeH = 1080;
+        ratioStr = "16:9";
+        break;
+      case "4:5":
       default:
-        return {
-          nativeW: 1080,
-          nativeH: 1350,
-          displayW: 400,
-          displayH: 500,
-          scale: 500 / 1350,
-          ratioStr: "4:5",
-        };
+        nativeW = 1080;
+        nativeH = 1350;
+        ratioStr = "4:5";
+        break;
     }
-  }, [aspectRatio]);
+
+    // Available stage dimensions: leave room for padding and floating #ctx-bar (~56px)
+    const padX = 48; // 24px left + 24px right
+    const padY = 96; // 24px top + 24px bottom + ctx-bar height
+    const availW = Math.max(260, stageSize.width - padX);
+    const availH = Math.max(260, stageSize.height - padY);
+
+    // Compute scale so the card fits inside available space
+    const fitScale = Math.min(availW / nativeW, availH / nativeH);
+    const scale = fitScale * (zoomLevel / 100);
+    const displayW = Math.round(nativeW * scale);
+    const displayH = Math.round(nativeH * scale);
+
+    return {
+      nativeW,
+      nativeH,
+      displayW,
+      displayH,
+      scale,
+      fitScale,
+      ratioStr,
+    };
+  }, [aspectRatio, stageSize, zoomLevel]);
   const [templateFilter, setTemplateFilter] = useState<string>("all");
   const [accentColorOverride, setAccentColorOverride] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(100);
   const [showSafeArea, setShowSafeArea] = useState(false);
 
   // Typography & Micro-Styling controls
@@ -960,6 +1040,23 @@ export function SwiperaStudioWorkspace({
         setUseHeroOnCover(true);
       }
 
+      // Immediately populate slide 0 with extracted article hero content matching Swipera
+      if (slides.length > 0) {
+        const next = [...slides];
+        const summarySnippet = data.description || (data.text ? data.text.split("\n\n")[0]?.slice(0, 140) : "");
+        next[0] = {
+          ...next[0],
+          title: data.title || next[0].title || "Web Article",
+          body: summarySnippet || next[0].body || "",
+          image: data.image || next[0].image,
+          label: "FIND",
+          type: "cover",
+        };
+        setSlides(next);
+        recordHistory(next);
+        setSelectedTemplateId("hero");
+      }
+
       toast.success(`Article extracted! (${(data.words || 0).toLocaleString()} words)`, { id: "url-fetch" });
     } catch (e: any) {
       toast.error(e.message || "An error occurred while fetching the article.", { id: "url-fetch" });
@@ -993,7 +1090,15 @@ export function SwiperaStudioWorkspace({
   // Finished Examples Loader
   const handleSelectExample = (example: any) => {
     if (!example || !example.slides) return;
-    setSlides(example.slides);
+    setSlides(
+      example.slides.map((s: any, idx: number) => ({
+        ...s,
+        id: s.id || `slide-${Date.now()}-${idx}`,
+        items: s.items || [],
+        stat: s.stat || "",
+        type: s.type || (idx === 0 ? "cover" : idx === example.slides.length - 1 ? "cta" : "content"),
+      }))
+    );
     setCurrentSlideIndex(0);
     if (example.template) {
       setSelectedTemplateId(example.template);
@@ -1004,7 +1109,11 @@ export function SwiperaStudioWorkspace({
     setProjectTitle(example.name || "Sample carousel");
     setRawContent(example.slides.map((s: any) => `${s.title}: ${s.body}`).join("\n"));
     setIsExamplesModalOpen(false);
-    toast.success(`Loaded example: ${example.name}`);
+    toast.success(
+      language === "ko"
+        ? `예시를 불러왔습니다: ${example.name}`
+        : `Loaded example: ${example.name}. Click any text to customize.`
+    );
   };
 
   // Direct Generation from Idea Item Card / Detail Reader
@@ -1652,19 +1761,6 @@ export function SwiperaStudioWorkspace({
                 ))}
               </div>
             </div>
-
-            {/* Finished Examples Starter Button */}
-            <button
-              type="button"
-              onClick={() => setIsExamplesModalOpen(true)}
-              className="w-full py-2 px-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] hover:border-[#c6f432] text-xs font-bold text-[var(--fg)] flex items-center justify-between transition-all cursor-pointer group"
-            >
-              <span className="flex items-center gap-2">
-                <i className="fas fa-layer-group text-[#365300] dark:text-[#c6f432]" />
-                <span>Start from a Finished Example</span>
-              </span>
-              <i className="fas fa-arrow-right text-[10px] text-[var(--muted)] group-hover:translate-x-0.5 transition-transform" />
-            </button>
           </div>
         )}
 
@@ -1881,6 +1977,27 @@ export function SwiperaStudioWorkspace({
             ========================================================================= */}
         {sourceMode !== "manual" && (
           <div className="space-y-3.5 pt-1">
+            {/* Finished Examples Starter Button (.ex-entry) - ALWAYS VISIBLE */}
+            <button
+              type="button"
+              id="btn-examples"
+              onClick={() => setIsExamplesModalOpen(true)}
+              className="ex-entry flex items-center gap-3 w-full p-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] hover:border-[#365300] dark:hover:border-[#c6f432] hover:bg-[var(--hover)] text-left transition-all cursor-pointer group shadow-xs mb-1"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[#c6f432] text-[#141414] grid place-items-center text-sm shrink-0 font-bold">
+                <i className="fas fa-images text-xs" />
+              </div>
+              <div className="flex flex-col min-w-0 flex-1 leading-snug">
+                <b className="text-xs font-extrabold text-[var(--fg)] group-hover:text-[#365300] dark:group-hover:text-[#c6f432] transition-colors">
+                  {language === "ko" ? "완성 예시에서 시작하기" : "Start from a finished example"}
+                </b>
+                <small className="text-[11px] text-[var(--muted)]">
+                  {language === "ko" ? "업종별 25종 · 글자만 바꾸면 끝" : "25 by industry · just swap the words"}
+                </small>
+              </div>
+              <i className="fas fa-chevron-right text-[10px] text-[var(--muted)] group-hover:translate-x-0.5 transition-transform shrink-0" />
+            </button>
+
             {/* Target Platform Selector (#opt-platform) */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -2074,6 +2191,7 @@ export function SwiperaStudioWorkspace({
   return (
     <>
       <link rel="stylesheet" href="/swipera/studio-style.css" />
+      <link rel="stylesheet" href="/swipera/templates.css" />
       <div className="flex flex-col h-screen w-full bg-[var(--bg)] text-[var(--fg)] font-sans antialiased overflow-hidden select-none">
         {/* =========================================================================
             1. TOPBAR (#topbar, 56px / h-14)
@@ -3648,7 +3766,8 @@ export function SwiperaStudioWorkspace({
               {/* ---------------- CENTER STAGE CANVAS VIEW ---------------- */}
               <div
                 id="canvas-stage"
-                className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden bg-[#eceae4] dark:bg-[#18181b]"
+                ref={canvasStageRef}
+                className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-auto bg-[#eceae4] dark:bg-[#18181b]"
               >
                 {/* Floating Context Bar directly over slide card matching Swipera Image 2 */}
                 <div
@@ -3784,180 +3903,54 @@ export function SwiperaStudioWorkspace({
                   id="focus-frame"
                   className="relative rounded-sm shadow-2xl ring-1 ring-black/10 dark:ring-white/10 transition-all duration-200 overflow-hidden select-text box-border group"
                   style={{
-                    width: `${Math.round(ratioGeometry.displayW * (zoomLevel / 100))}px`,
-                    height: `${Math.round(ratioGeometry.displayH * (zoomLevel / 100))}px`,
+                    width: `${ratioGeometry.displayW}px`,
+                    height: `${ratioGeometry.displayH}px`,
                   }}
                 >
                   {/* Native 1080x1350 or 1080x1080 scaled container */}
                   <div
                     style={{
-                      transform: `scale(${ratioGeometry.scale * (zoomLevel / 100)})`,
+                      transform: `scale(${ratioGeometry.scale})`,
                       transformOrigin: "top left",
                       width: `${ratioGeometry.nativeW}px`,
                       height: `${ratioGeometry.nativeH}px`,
                       position: "absolute",
                       top: 0,
                       left: 0,
-                      backgroundColor: activeScheme.bg || "#141414",
-                      backgroundImage: currentSlide.image
-                        ? undefined
-                        : isGradientBg
-                          ? `linear-gradient(${gradientAngle}deg, ${activeScheme.bg}, ${gradientEndColor})`
-                          : undefined,
-                      color: activeScheme.fg || "#ffffff",
-                      fontFamily: bodyFont,
-                      padding: "84px",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      overflow: "hidden",
-                      boxSizing: "border-box",
-                      lineHeight: 1.2,
-                      wordBreak: "keep-all",
                     }}
                   >
-                    {/* If slide has an image */}
-                    {currentSlide.image ? (
-                      <div className="absolute inset-0 w-full h-full overflow-hidden select-none">
-                        <img
-                          src={currentSlide.image}
-                          alt={currentSlide.title || "Slide Image"}
-                          style={{
-                            width: `${ratioGeometry.nativeW}px`,
-                            height: `${ratioGeometry.nativeH}px`,
-                            objectFit: (currentSlide.imageFit || activeImageFit) === "contain" ? "contain" : "cover",
-                          }}
-                          className="select-none transition-transform duration-200 pointer-events-none"
-                        />
-
-                        {/* Top Category Badge */}
-                        <div className="absolute top-10 left-10 z-20 pointer-events-none">
-                          <span
-                            className="font-black uppercase tracking-widest px-6 py-2 rounded-lg border shadow-sm backdrop-blur-md bg-black/70 text-[#ff9500] border-[#ff9500]"
-                            style={{ fontSize: "28px" }}
-                          >
-                            {currentSlide.label || (currentSlideIndex === 0 ? "COVER" : `SLIDE ${currentSlideIndex + 1}`)}
-                          </span>
-                        </div>
-
-                        {/* Footer Badge */}
-                        <div
-                          className="absolute bottom-10 right-10 z-20 font-mono font-bold px-5 py-2 rounded-lg bg-black/70 text-white backdrop-blur-md"
-                          style={{ fontSize: "28px" }}
-                        >
-                          {currentSlideIndex + 1}/{slides.length}
-                        </div>
-
-                        {/* Text Overlay if toggled */}
-                        {showImageTextOverlay && (currentSlide.title || currentSlide.body) && (
-                          <div className="absolute inset-x-0 bottom-0 p-16 pt-32 bg-gradient-to-t from-black/90 via-black/50 to-transparent text-white z-10 text-left select-text">
-                            <h2
-                              contentEditable
-                              suppressContentEditableWarning
-                              onBlur={(e) => updateCurrentSlide({ title: e.currentTarget.textContent || "" })}
-                              className="font-black leading-tight drop-shadow-md outline-none hover:ring-2 hover:ring-[#c6f432] rounded-md px-2 transition-all"
-                              style={{ fontFamily: titleFont, fontSize: "64px" }}
-                            >
-                              {currentSlide.title}
-                            </h2>
-                            {currentSlide.body && (
-                              <p
-                                contentEditable
-                                suppressContentEditableWarning
-                                onBlur={(e) => updateCurrentSlide({ body: e.currentTarget.textContent || "" })}
-                                className="opacity-90 mt-4 line-clamp-3 drop-shadow-sm font-medium outline-none hover:ring-2 hover:ring-[#c6f432] rounded-md px-2 transition-all"
-                                style={{ fontFamily: bodyFont, fontSize: "36px" }}
-                              >
-                                {currentSlide.body}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        {/* Top Header of Card */}
-                        <header className="c-top flex items-center justify-between w-full z-10 flex-shrink-0">
-                          <span
-                            className="font-black uppercase tracking-widest px-6 py-2 rounded-lg border-2 border-current"
-                            style={{
-                              fontSize: "28px",
-                              color: activeScheme.a || "#c6f432",
-                            }}
-                          >
-                            {currentSlide.label || (currentSlideIndex === 0 ? "ACTION" : `STEP ${currentSlideIndex}`)}
-                          </span>
-                        </header>
-
-                        {/* Center Main */}
-                        <div
-                          className={cn(
-                            "flex-1 flex flex-col justify-center my-auto py-6 z-10",
-                            textAlign === "center" ? "items-center text-center" : textAlign === "right" ? "items-end text-right" : "items-start text-left"
-                          )}
-                        >
-                          {/* Emoji */}
-                          {currentSlide.emoji && (
-                            <div className="select-none mb-6" style={{ fontSize: "84px", lineHeight: 1 }}>
-                              {currentSlide.emoji}
-                            </div>
-                          )}
-
-                          {/* Headline */}
-                          <h2
-                            contentEditable
-                            suppressContentEditableWarning
-                            onBlur={(e) => updateCurrentSlide({ title: e.currentTarget.textContent || "" })}
-                            className="font-black tracking-tight outline-none hover:ring-2 hover:ring-[#c6f432] rounded-md px-2 transition-all"
-                            style={{
-                              fontFamily: titleFont,
-                              fontSize: aspectRatio === "1:1" ? "84px" : "76px",
-                              letterSpacing: `${tracking}em`,
-                              lineHeight: leading || 1.15,
-                              fontWeight: titleWeight || 900,
-                              textTransform: titleCase,
-                              textShadow: hasTitleShadow ? "0 4px 10px rgba(0,0,0,0.3)" : undefined,
-                            }}
-                          >
-                            {currentSlide.title}
-                          </h2>
-
-                          {/* Body Text */}
-                          <p
-                            contentEditable
-                            suppressContentEditableWarning
-                            onBlur={(e) => updateCurrentSlide({ body: e.currentTarget.textContent || "" })}
-                            className="leading-relaxed opacity-85 outline-none hover:ring-2 hover:ring-[#c6f432] rounded-md px-2 transition-all font-medium mt-6"
-                            style={{
-                              fontFamily: bodyFont,
-                              fontSize: "38px",
-                              maxWidth: "92%",
-                            }}
-                          >
-                            {currentSlide.body}
-                          </p>
-                        </div>
-
-                        {/* Bottom Footer */}
-                        <footer className="c-bottom flex items-center justify-between w-full z-10 flex-shrink-0 font-mono opacity-60" style={{ fontSize: "28px" }}>
-                          <span className="c-page">{currentSlideIndex + 1}/{slides.length}</span>
-                          <span className="c-swipe">{currentSlideIndex < slides.length - 1 ? "Next →" : ""}</span>
-                        </footer>
-                      </>
-                    )}
-
-                    {/* Safe Area Overlay Guide */}
-                    {showSafeArea && (
-                      <div className="absolute inset-0 pointer-events-none border-4 border-dashed border-red-500/60 z-30 flex flex-col justify-between p-8">
-                        <div className="bg-red-500/20 text-red-600 dark:text-red-300 font-mono font-bold px-4 py-2 rounded text-center" style={{ fontSize: "24px" }}>
-                          {currentPlatformMeta.name} Top Header Safe Zone
-                        </div>
-                        <div className="bg-red-500/20 text-red-600 dark:text-red-300 font-mono font-bold px-4 py-2 rounded text-center" style={{ fontSize: "24px" }}>
-                          {currentPlatformMeta.name} Bottom Controls Safe Zone
-                        </div>
-                      </div>
-                    )}
+                    <SlideCanvasRenderer
+                      slide={currentSlide}
+                      slideIndex={currentSlideIndex}
+                      totalSlides={slides.length}
+                      aspectRatio={aspectRatio}
+                      templateId={selectedTemplateId || "hero"}
+                      activeScheme={activeScheme}
+                      titleFont={titleFont}
+                      bodyFont={bodyFont}
+                      brand={brandHandle || "@theabreed"}
+                      site={brandWebsite || (extractedSource?.domain ? extractedSource.domain.replace(/^www\./, "") : extractedSource?.siteName || "TechCrunch")}
+                      swipeText={language === "ko" ? "다음 →" : "Swipe →"}
+                      textAlign={textAlign}
+                      titleWeight={titleWeight}
+                      titleCase={titleCase}
+                      tracking={tracking}
+                      leading={leading}
+                      hasTitleShadow={hasTitleShadow}
+                      isGradientBg={isGradientBg}
+                      gradientAngle={gradientAngle}
+                      gradientEndColor={gradientEndColor}
+                      showImageTextOverlay={showImageTextOverlay}
+                      showSafeArea={showSafeArea}
+                      platformName={currentPlatformMeta.name}
+                      isInteractive={true}
+                      onUpdateSlide={updateCurrentSlide}
+                      nativeW={ratioGeometry.nativeW}
+                      nativeH={ratioGeometry.nativeH}
+                    />
                   </div>
+
+
 
                   {/* Hover Floating Controls on Card Stage for Image adjustments */}
                   {currentSlide.image && (
@@ -3998,13 +3991,13 @@ export function SwiperaStudioWorkspace({
                   {/* Quick style pills */}
                   <div className="sb-list" id="sb-list">
                     {[
-                      { id: "dark", label: "Dark Bold", color: "#141414", a: "#facc15" },
+                      { id: "hero", label: "Photo Hero", color: "#141414", a: "#c6f432" },
+                      { id: "split", label: "Split", color: "#ffffff", a: "#3b82f6" },
+                      { id: "torn", label: "Scrapbook", color: "#fef3c7", a: "#ef4444" },
+                      { id: "editorial", label: "Editorial Photo", color: "#1c1917", a: "#fafaf9" },
                       { id: "brutalism", label: "Brutalism", color: "#facc15", a: "#141414" },
-                      { id: "neongeo", label: "Neon Geo", color: "#06b6d4", a: "#ec4899" },
-                      { id: "editorial", label: "Editorial Photo", color: "#84cc16", a: "#141414" },
                       { id: "swiss", label: "Swiss Bold", color: "#ef4444", a: "#ffffff" },
-                      { id: "pop", label: "Neon Pop", color: "#ec4899", a: "#facc15" },
-                      { id: "minimal", label: "Minimal", color: "#3b82f6", a: "#141414" },
+                      { id: "pop", label: "Neon Pop", color: "#ec4899", a: "#c6f432" },
                     ].map((style) => (
                       <button
                         key={style.id}
@@ -4108,73 +4101,41 @@ export function SwiperaStudioWorkspace({
                               position: "absolute",
                               top: 0,
                               left: 0,
-                              backgroundColor: s.image ? "#111" : activeScheme.bg || "#141414",
-                              color: activeScheme.fg || "#ffffff",
-                              padding: "84px",
-                              display: "flex",
-                              flexDirection: "column",
-                              justifyContent: "space-between",
-                              overflow: "hidden",
-                              boxSizing: "border-box",
-                              lineHeight: 1.2,
-                              wordBreak: "keep-all",
+                              pointerEvents: "none",
                             }}
                           >
-                            {s.image ? (
-                              <img
-                                src={s.image}
-                                alt={s.title || `Slide ${idx + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <>
-                                {/* Top Label */}
-                                <div className="flex items-center justify-between w-full">
-                                  <span
-                                    className="text-2xl font-black uppercase tracking-widest px-4 py-1 rounded-[6px] border border-current"
-                                    style={{ color: activeScheme.a || "#c6f432" }}
-                                  >
-                                    {s.label || (idx === 0 ? "ACTION" : `STEP ${idx}`)}
-                                  </span>
-                                </div>
-
-                                {/* Center Main */}
-                                <div className="flex-1 flex flex-col justify-center my-auto">
-                                  {s.emoji && (
-                                    <div className="text-6xl mb-4 select-none">{s.emoji}</div>
-                                  )}
-                                  <div
-                                    className="font-black tracking-tight leading-[1.15]"
-                                    style={{
-                                      fontFamily: titleFont,
-                                      fontSize: "68px",
-                                    }}
-                                  >
-                                    {s.title}
-                                  </div>
-                                  {s.body && (
-                                    <div
-                                      className="opacity-80 mt-4 leading-relaxed font-medium"
-                                      style={{
-                                        fontFamily: bodyFont,
-                                        fontSize: "36px",
-                                      }}
-                                    >
-                                      {s.body}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Bottom Footer */}
-                                <div className="flex items-center justify-between w-full text-2xl font-mono opacity-60">
-                                  <span>{idx + 1}/{slides.length}</span>
-                                </div>
-                              </>
-                            )}
+                            <SlideCanvasRenderer
+                              slide={s}
+                              slideIndex={idx}
+                              totalSlides={slides.length}
+                              aspectRatio={aspectRatio}
+                              templateId={selectedTemplateId || "hero"}
+                              activeScheme={activeScheme}
+                              titleFont={titleFont}
+                              bodyFont={bodyFont}
+                              brand={brandHandle || "@theabreed"}
+                              site={brandWebsite || (extractedSource?.domain ? extractedSource.domain.replace(/^www\./, "") : extractedSource?.siteName || "TechCrunch")}
+                              swipeText={language === "ko" ? "다음 →" : "Swipe →"}
+                              textAlign={textAlign}
+                              titleWeight={titleWeight}
+                              titleCase={titleCase}
+                              tracking={tracking}
+                              leading={leading}
+                              hasTitleShadow={hasTitleShadow}
+                              isGradientBg={isGradientBg}
+                              gradientAngle={gradientAngle}
+                              gradientEndColor={gradientEndColor}
+                              showImageTextOverlay={showImageTextOverlay}
+                              showSafeArea={false}
+                              platformName={currentPlatformMeta.name}
+                              isInteractive={false}
+                              nativeW={nativeW}
+                              nativeH={nativeH}
+                            />
                           </div>
                         </div>
                         <span className="film-num">{idx + 1}</span>
-                        <span className="film-type">{idx === 0 ? "COVER" : (s.type || "SLIDE")}</span>
+                        <span className="film-type">{s.type ? s.type.toUpperCase() : (idx === 0 ? "CTA" : "CONTENT")}</span>
                       </div>
                     );
                   })}
@@ -4200,398 +4161,21 @@ export function SwiperaStudioWorkspace({
               2.4 RIGHT INSPECTOR PANEL (Slide Properties)
               ===================================================================== */}
             {isInspectorOpen && (
-              <aside
-                id="inspector"
-                className="w-[300px] shrink-0 border-l border-[var(--line)] bg-[var(--panel)] flex flex-col z-10 select-none animate-in slide-in-from-right-4 duration-150 overflow-y-auto"
-                data-purpose="studio-inspector"
-              >
-                {/* Inspector Header */}
-                <div className="p-4 pb-2 flex items-center justify-between">
-                  <h2 className="panel-title text-sm font-extrabold text-[var(--fg)]">
-                    Slide properties
-                  </h2>
-                  <span id="ins-pos" className="text-xs font-semibold text-[var(--muted)] font-mono">
-                    {currentSlideIndex + 1}/{slides.length}
-                  </span>
-                </div>
-
-                    {/* Inspector Tabs (Content, Visual, AI) with authentic .itabs class */}
-                    <div className="px-4 pb-3">
-                      <div className="itabs" id="itabs" role="tablist">
-                        <button
-                          type="button"
-                          role="tab"
-                          onClick={() => setInspectorTab("content")}
-                          className={cn(inspectorTab === "content" && "on")}
-                        >
-                          <i className="fas fa-align-left" />
-                          <span>Content</span>
-                        </button>
-                        <button
-                          type="button"
-                          role="tab"
-                          onClick={() => setInspectorTab("visual")}
-                          className={cn(inspectorTab === "visual" && "on")}
-                        >
-                          <i className="fas fa-image" />
-                          <span>Visual</span>
-                        </button>
-                        <button
-                          type="button"
-                          role="tab"
-                          onClick={() => setInspectorTab("ai")}
-                          className={cn(inspectorTab === "ai" && "on")}
-                        >
-                          <i className="fas fa-wand-magic-sparkles" />
-                          <span>AI</span>
-                        </button>
-                      </div>
-                    </div>
-
-                {/* Inspector Content Body */}
-                <div className="flex-1 overflow-y-auto px-4 space-y-3.5">
-                  {/* 1. CONTENT TAB (Active by default in Screenshot 2) */}
-                  {inspectorTab === "content" && (
-                    <div className="space-y-3.5 animate-in fade-in duration-100">
-                      <label className="lbl">
-                        <span>Slide type</span>
-                        <select
-                          id="ins-type"
-                          value={currentSlide.type}
-                          onChange={(e) => updateCurrentSlide({ type: e.target.value as any })}
-                          className="field text-xs font-medium"
-                        >
-                          <option value="cover">Cover</option>
-                          <option value="content">Content</option>
-                          <option value="list">List</option>
-                          <option value="quote">Quote</option>
-                          <option value="stat">Number / Stat</option>
-                          <option value="chart">Chart</option>
-                          <option value="table">Table</option>
-                          <option value="cta">CTA Outro</option>
-                        </select>
-                      </label>
-
-                      <div className="grid grid-cols-[1fr_72px] gap-2">
-                        <label className="lbl">
-                          <span>Label</span>
-                          <input
-                            id="ins-label"
-                            type="text"
-                            value={currentSlide.label || ""}
-                            onChange={(e) => updateCurrentSlide({ label: e.target.value })}
-                            className="field text-xs font-bold uppercase font-mono"
-                          />
-                        </label>
-                        <label className="lbl">
-                          <span>Emoji</span>
-                          <input
-                            id="ins-emoji"
-                            type="text"
-                            value={currentSlide.emoji || ""}
-                            onChange={(e) => updateCurrentSlide({ emoji: e.target.value })}
-                            className="field text-center text-base"
-                          />
-                        </label>
-                      </div>
-
-                      <label className="lbl">
-                        <span className="flex items-center justify-between mb-1">
-                          <span>Title</span>
-                          <span className="flex items-center gap-2">
-                            <span className="text-[10px] text-[var(--muted)] font-mono">
-                              {currentSlide.title.length}/22
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleAIRewrite("hook")}
-                              className="text-[10px] text-[#365300] dark:text-[#c6f432] font-bold hover:underline flex items-center gap-1 cursor-pointer"
-                            >
-                              <i className="fas fa-wand-magic-sparkles text-[9px]" />
-                              <span>AI headlines</span>
-                            </button>
-                          </span>
-                        </span>
-                        <textarea
-                          id="ins-title"
-                          value={currentSlide.title}
-                          onChange={(e) => updateCurrentSlide({ title: e.target.value })}
-                          rows={2}
-                          className="field text-xs font-bold resize-none leading-snug"
-                        />
-                      </label>
-
-                      <label className="lbl">
-                        <span className="flex items-center justify-between mb-1">
-                          <span>Body</span>
-                          <span className="text-[10px] text-[var(--muted)] font-mono">
-                            {currentSlide.body.length}/40
-                          </span>
-                        </span>
-                        <textarea
-                          id="ins-body"
-                          value={currentSlide.body}
-                          onChange={(e) => updateCurrentSlide({ body: e.target.value })}
-                          rows={3}
-                          className="field text-xs resize-none leading-relaxed"
-                        />
-                      </label>
-
-                      {/* List Items Repeater - only on list slides */}
-                      {currentSlide.type === "list" && (
-                        <div className="space-y-2 pt-2 border-t border-[var(--line)]">
-                          <div className="flex justify-between items-center text-[11px] font-bold text-[var(--muted)]">
-                            <span>List Items</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const items = currentSlide.items ? [...currentSlide.items] : [];
-                                items.push(`New bullet ${items.length + 1}`);
-                                updateCurrentSlide({ items });
-                              }}
-                              className="text-[#365300] dark:text-[#c6f432] hover:underline cursor-pointer"
-                            >
-                              + Add Item
-                            </button>
-                          </div>
-                          {currentSlide.items?.map((item, idx) => (
-                            <div key={idx} className="flex gap-1">
-                              <input
-                                type="text"
-                                value={item}
-                                onChange={(e) => {
-                                  const next = [...(currentSlide.items || [])];
-                                  next[idx] = e.target.value;
-                                  updateCurrentSlide({ items: next });
-                                }}
-                                className="flex-1 p-1.5 text-xs rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--fg)] outline-none"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const next = (currentSlide.items || []).filter((_, i) => i !== idx);
-                                  updateCurrentSlide({ items: next });
-                                }}
-                                className="p-1 text-[var(--muted)] hover:text-red-500 cursor-pointer"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 2. VISUAL TAB */}
-                  {inspectorTab === "visual" && (
-                    <div className="space-y-3.5 animate-in fade-in duration-100">
-                      <input
-                        ref={inspectorImageInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          if (e.target.files?.[0]) handleSingleSlideImageUpload(e.target.files[0]);
-                        }}
-                      />
-
-                      {currentSlide.image ? (
-                        <div className="p-3 rounded-xl border border-[var(--line)] bg-[var(--bg)] space-y-2.5">
-                          <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-black/10 border border-[var(--line)]">
-                            <img
-                              src={currentSlide.image}
-                              alt="Slide preview"
-                              className="w-full h-full object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                updateCurrentSlide({ image: undefined });
-                                toast.info("Removed image");
-                              }}
-                              className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/70 hover:bg-red-500 text-white transition-colors cursor-pointer"
-                              title="Remove image"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          <div className="flex gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => inspectorImageInputRef.current?.click()}
-                              className="flex-1 py-1.5 rounded-lg border border-[var(--line)] text-xs font-bold hover:bg-[var(--hover)] text-center cursor-pointer"
-                            >
-                              Replace Image
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const nextFit = (currentSlide.imageFit || activeImageFit) === "cover" ? "contain" : "cover";
-                                setActiveImageFit(nextFit);
-                                updateCurrentSlide({ imageFit: nextFit });
-                              }}
-                              className="px-2.5 py-1.5 rounded-lg border border-[var(--line)] text-xs font-bold hover:bg-[var(--hover)] text-center cursor-pointer"
-                            >
-                              {(currentSlide.imageFit || activeImageFit) === "cover" ? "Fit" : "Fill"}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => inspectorImageInputRef.current?.click()}
-                          className="p-4 rounded-xl border-2 border-dashed border-[var(--line)] bg-[var(--bg)] text-center cursor-pointer hover:border-[#c6f432] transition-all group"
-                        >
-                          <Upload className="w-5 h-5 mx-auto text-[var(--muted)] group-hover:text-[#365300] dark:group-hover:text-[#c6f432] mb-1 transition-colors" />
-                          <div className="text-xs font-bold text-[var(--fg)]">Upload slide image</div>
-                          <div className="text-[10px] text-[var(--muted)]">PNG, JPG, WebP, GIF</div>
-                        </div>
-                      )}
-
-                      <div className="space-y-2">
-                        <span className="text-[11px] font-bold text-[var(--muted)] block">Background Color</span>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="color"
-                            value={customBg || activeScheme.bg}
-                            onChange={(e) => setCustomBg(e.target.value)}
-                            className="w-8 h-8 rounded-lg border border-[var(--line)] p-0 bg-transparent cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={customBg || activeScheme.bg}
-                            onChange={(e) => setCustomBg(e.target.value)}
-                            className="field flex-1 text-xs font-mono"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => toast.info("Search AI stock imagery")}
-                          className="py-1.5 px-2 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-xs font-bold text-[var(--fg)] hover:bg-[var(--hover)] text-center cursor-pointer"
-                        >
-                          AI Stock Image
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toast.success("Applied visual styles to all slides")}
-                          className="py-1.5 px-2 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-xs font-bold text-[var(--fg)] hover:bg-[var(--hover)] text-center cursor-pointer"
-                        >
-                          Apply to all
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 3. AI TAB */}
-                  {inspectorTab === "ai" && (
-                    <div className="space-y-4 animate-in fade-in duration-100">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-xs font-bold text-[var(--fg)]">
-                          <span>Smart Text Fit</span>
-                          <span className="font-mono text-emerald-600 dark:text-emerald-400">
-                            Auto-filled: {smartFitPercent}%
-                          </span>
-                        </div>
-                        <div className="w-full h-2 rounded-full bg-[var(--hover)] overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 rounded-full transition-all duration-200"
-                            style={{ width: `${Math.min(100, (smartFitPercent / 150) * 100)}%` }}
-                          />
-                        </div>
-                        <div className="grid grid-cols-3 gap-1 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSmartFitPercent(Math.max(60, smartFitPercent - 20));
-                              toast.info("Shortened text length");
-                            }}
-                            className="py-1 px-1.5 rounded-md border border-[var(--line)] text-xs font-medium hover:bg-[var(--hover)] text-center text-[var(--fg)] cursor-pointer"
-                          >
-                            # Shorter
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSmartFitPercent(100);
-                              toast.success("Perfect fit length applied");
-                            }}
-                            className="py-1 px-1.5 rounded-md border border-[#c6f432] bg-[#c6f432]/10 text-xs font-bold text-[var(--fg)] text-center cursor-pointer"
-                          >
-                            # Fit length
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSmartFitPercent(Math.min(200, smartFitPercent + 20));
-                              toast.info("Expanded text length");
-                            }}
-                            className="py-1 px-1.5 rounded-md border border-[var(--line)] text-xs font-medium hover:bg-[var(--hover)] text-center text-[var(--fg)] cursor-pointer"
-                          >
-                            # Longer
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Auto-shrink Checkbox */}
-                      <div className="p-2.5 rounded-xl border border-[var(--line)] bg-[var(--bg)]">
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[var(--fg)]">
-                          <input
-                            type="checkbox"
-                            checked={autoShrink}
-                            onChange={(e) => setAutoShrink(e.target.checked)}
-                            className="accent-[#c6f432] rounded"
-                          />
-                          <span>Auto-shrink text on overflow</span>
-                        </label>
-                      </div>
-
-                      {/* Quick AI Actions */}
-                      <div className="space-y-1.5 pt-2">
-                        <span className="text-[10px] font-mono uppercase font-bold text-[var(--muted)]">
-                          Quick AI Actions
-                        </span>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {[
-                            { id: "shorter", label: "Shorter" },
-                            { id: "hook", label: "Hook" },
-                            { id: "numbers", label: "Specific" },
-                            { id: "emotional", label: "Variant" },
-                          ].map((action) => (
-                            <button
-                              key={action.id}
-                              type="button"
-                              onClick={() => handleAIRewrite(action.id)}
-                              className="py-1.5 px-2.5 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-xs font-semibold text-[var(--fg)] hover:bg-[var(--hover)] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                            >
-                              <Sparkles className="w-3 h-3 text-[#365300] dark:text-[#c6f432]" />
-                              <span>{action.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Bottom Dock: Easy Mode / All Features Toggle */}
-                <div id="easy-dock" className="easy-dock">
-                  <button
-                    id="btn-easy"
-                    type="button"
-                    onClick={() => {
-                      setIsEasyMode(!isEasyMode);
-                      toast.info(isEasyMode ? "Switched to All Features" : "Switched to Easy Mode");
-                    }}
-                    className="easy-btn cursor-pointer"
-                  >
-                    <i className="fas fa-eye" />
-                    <span>All features</span>
-                  </button>
-                </div>
-              </aside>
+              <SlidePropertiesInspector
+                currentSlide={currentSlide}
+                currentSlideIndex={currentSlideIndex}
+                totalSlides={slides.length}
+                updateCurrentSlide={updateCurrentSlide}
+                activeScheme={activeScheme}
+                language={language}
+                isEasyMode={isEasyMode}
+                setIsEasyMode={setIsEasyMode}
+                onClose={() => setIsInspectorOpen(false)}
+                slides={slides}
+                setSlides={setSlides}
+                handleSingleSlideImageUpload={handleSingleSlideImageUpload}
+                handleAIRewrite={handleAIRewrite}
+              />
             )}
 
             {/* Show Inspector Pill (When closed) */}
@@ -4611,91 +4195,12 @@ export function SwiperaStudioWorkspace({
         {/* =========================================================================
             3. FINISHED EXAMPLES MODAL DRAWER (25 EXAMPLES ACROSS 7 INDUSTRIES)
             ========================================================================= */}
-        {isExamplesModalOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
-            onClick={() => setIsExamplesModalOpen(false)}
-          >
-            <div
-              className="w-full max-w-4xl max-h-[85vh] bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="p-4 sm:p-5 border-b border-[var(--line)] flex items-center justify-between">
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-[var(--fg)] flex items-center gap-2">
-                    <span>25 Finished Examples by Industry</span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#c6f432] text-[#141414]">
-                      Ready to use
-                    </span>
-                  </h3>
-                  <p className="text-xs text-[var(--muted)] mt-0.5">
-                    Click any example to load its complete slide deck and designer theme into your canvas.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsExamplesModalOpen(false)}
-                  className="p-1.5 rounded-lg hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Category Filter Pills */}
-              <div className="px-4 py-2.5 border-b border-[var(--line)] bg-[var(--bg)] flex gap-1.5 overflow-x-auto scrollbar-none">
-                {swiperaExampleCategories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setSelectedExampleCategory(cat.id)}
-                    className={cn(
-                      "px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer",
-                      selectedExampleCategory === cat.id
-                        ? "bg-[var(--fg)] text-[var(--bg)] shadow-xs"
-                        : "border border-[var(--line)] bg-[var(--panel)] text-[var(--muted)] hover:text-[var(--fg)]"
-                    )}
-                  >
-                    {language === "ko" ? cat.ko : cat.en}
-                  </button>
-                ))}
-              </div>
-
-              {/* Examples Grid */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {filteredExamples.map((ex: any) => (
-                  <div
-                    key={ex.id}
-                    onClick={() => handleSelectExample(ex)}
-                    className="p-3.5 rounded-xl border border-[var(--line)] bg-[var(--bg)] hover:border-[#c6f432] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[var(--muted)] mb-1">
-                        <span className="uppercase text-[#365300] dark:text-[#c6f432] bg-[#c6f432]/20 px-1.5 py-0.5 rounded">
-                          {ex.cat}
-                        </span>
-                        <span>{ex.slides?.length || 4} slides</span>
-                      </div>
-                      <h4 className="text-xs font-extrabold text-[var(--fg)] group-hover:text-[#365300] dark:group-hover:text-[#c6f432] transition-colors leading-snug">
-                        {ex.name}
-                      </h4>
-                      <p className="text-[11px] text-[var(--muted)] line-clamp-2 mt-1 leading-relaxed">
-                        {ex.slides?.[0]?.title} — {ex.slides?.[0]?.body}
-                      </p>
-                    </div>
-
-                    <div className="pt-3 mt-3 border-t border-[var(--line)] flex items-center justify-between text-[11px]">
-                      <span className="text-[10px] font-mono text-[var(--muted)]">Style: {ex.template}</span>
-                      <span className="font-bold text-[#365300] dark:text-[#c6f432] group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                        Use this &rarr;
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        <ExampleGalleryModal
+          isOpen={isExamplesModalOpen}
+          onClose={() => setIsExamplesModalOpen(false)}
+          onSelectExample={handleSelectExample}
+          language={language}
+        />
 
         {/* =========================================================================
             4. 43-FONTS VISUAL PICKER MODAL
