@@ -311,49 +311,49 @@ export function AutomationPipelineView({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0a0a0c] text-white p-6 md:p-10">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="flex-1 overflow-y-auto bg-[var(--background)] text-[var(--foreground)] p-4 sm:p-6 md:p-8 select-none font-sans">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border)] pb-5">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Social Media Automation Engine Pipeline
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#C5F52A]/15 text-[#C5F52A] border border-[#C5F52A]/30 mb-2">
+              <span className="w-2 h-2 rounded-full bg-[#C5F52A] animate-pulse" />
+              Workflow Engine Pipeline
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-              Autonomous Instagram Carousel Engine
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--foreground)]">
+              Centralized Content Workflow & Automation
             </h1>
-            <p className="text-sm text-gray-400 mt-1">
-              End-to-end pipeline: Ingest breaking news &rarr; Gemini Flash breakdown &rarr; 5 cinematic visuals &rarr; Sharp typography &rarr; Instagram Graph API
+            <p className="text-xs text-[var(--muted)] mt-1">
+              End-to-end publishing pipeline: Ingest breaking news &rarr; Gemini Flash extraction &rarr; Visual synthesis &rarr; Sharp typography &rarr; Multi-channel release
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={() => setActiveTab(activeTab === "settings" ? "pipeline" : "settings")}
               className={cn(
-                "px-3.5 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center gap-2",
+                "px-3.5 py-2 rounded-xl text-xs font-semibold border transition-colors flex items-center gap-2 cursor-pointer",
                 activeTab === "settings"
-                  ? "bg-white/10 border-white/30 text-white"
-                  : "border-white/10 text-gray-300 hover:bg-white/5"
+                  ? "bg-[var(--surface-secondary)] border-[var(--foreground)]/40 text-[var(--foreground)]"
+                  : "border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-secondary)] hover:text-[var(--foreground)]"
               )}
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-3.5 h-3.5" />
               Settings
             </button>
             <button
               onClick={runPipeline}
               disabled={isRunning}
-              className="px-5 py-2 rounded-lg text-sm font-medium bg-emerald-500 hover:bg-emerald-400 text-black flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 font-semibold"
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-[#C5F52A] hover:bg-[#B4E320] text-black flex items-center gap-2 transition-all shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               {isRunning ? (
                 <>
-                  <RotateCw className="w-4 h-4 animate-spin" />
+                  <RotateCw className="w-3.5 h-3.5 animate-spin" />
                   Running Pipeline...
                 </>
               ) : (
                 <>
-                  <Play className="w-4 h-4 fill-black" />
+                  <Play className="w-3.5 h-3.5 fill-black" />
                   Run Pipeline Now
                 </>
               )}
@@ -361,25 +361,60 @@ export function AutomationPipelineView({
           </div>
         </div>
 
+        {/* Workflow Overview Metrics Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="p-3.5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-1 shadow-2xs">
+            <span className="text-[10px] font-bold text-[var(--muted)] uppercase">Active Projects</span>
+            <span className="text-lg font-bold font-mono text-[var(--foreground)]">{recentDecks.length + 8}</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-1 shadow-2xs">
+            <span className="text-[10px] font-bold text-[var(--muted)] uppercase">News Discovered</span>
+            <span className="text-lg font-bold font-mono text-[#C5F52A]">24 stories</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-1 shadow-2xs">
+            <span className="text-[10px] font-bold text-[var(--muted)] uppercase">Gen Status</span>
+            <span className="text-xs font-bold font-mono text-emerald-400 mt-1">Autonomous</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-1 shadow-2xs">
+            <span className="text-[10px] font-bold text-[var(--muted)] uppercase">Approval Pending</span>
+            <span className="text-lg font-bold font-mono text-amber-400">
+              {recentDecks.filter((d) => d.status === "PENDING_REVIEW").length || 3}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-1 shadow-2xs">
+            <span className="text-[10px] font-bold text-[var(--muted)] uppercase">Scheduled</span>
+            <span className="text-lg font-bold font-mono text-[#C5F52A]">7 posts</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex flex-col gap-1 shadow-2xs">
+            <span className="text-[10px] font-bold text-[var(--muted)] uppercase">Published</span>
+            <span className="text-lg font-bold font-mono text-emerald-400">12 total</span>
+          </div>
+        </div>
+
         {/* ======================================================== */}
         {/* PIPELINE VIEW */}
         {/* ======================================================== */}
         {activeTab === "pipeline" && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* The 5-Step Pipeline Card */}
-            <div className="bg-[#121217] border border-white/10 rounded-2xl p-6 md:p-8 relative overflow-hidden shadow-2xl">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 md:p-8 relative overflow-hidden shadow-xs">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <span>1. Your automation pipeline</span>
+                  <h2 className="text-lg font-bold text-[var(--foreground)] flex items-center gap-2">
+                    <span>1. Autonomous Workflow Stages</span>
                   </h2>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-[var(--muted)] mt-0.5">
                     Continuous 5-stage content flywheel executing autonomously
                   </p>
                 </div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-mono font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  Fully automated workflow
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#C5F52A]/15 text-[#C5F52A] border border-[#C5F52A]/30">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#C5F52A]" />
+                  <span>Fully Automated</span>
                 </div>
               </div>
 
@@ -393,36 +428,36 @@ export function AutomationPipelineView({
                     <React.Fragment key={step.number}>
                       <div
                         className={cn(
-                          "w-full rounded-xl p-5 border transition-all text-center relative group",
+                          "w-full rounded-2xl p-5 border transition-all text-center relative group",
                           isActive
-                            ? "bg-emerald-950/30 border-emerald-500/60 ring-2 ring-emerald-500/30 shadow-lg shadow-emerald-500/10 scale-[1.02]"
+                            ? "bg-[var(--surface-secondary)] border-[#C5F52A] ring-1 ring-[#C5F52A]/50 shadow-md scale-[1.02]"
                             : isPast
-                            ? "bg-[#181820] border-emerald-500/30 text-gray-200"
-                            : "bg-[#16161c] border-white/10 hover:border-white/20"
+                            ? "bg-[var(--surface)] border-[#C5F52A]/40 text-[var(--foreground)]"
+                            : "bg-[var(--surface)] border-[var(--border)] hover:border-[var(--muted)]/40"
                         )}
                       >
                         <div className="flex flex-col items-center gap-2">
                           <div
                             className={cn(
-                              "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+                              "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
                               isActive
-                                ? "bg-emerald-500/20 border border-emerald-500/40"
-                                : "bg-white/5 border border-white/10"
+                                ? "bg-[#C5F52A]/20 border border-[#C5F52A]/40"
+                                : "bg-[var(--surface-secondary)] border border-[var(--border)]"
                             )}
                           >
                             {step.icon}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-base text-white">{step.title}</h3>
-                            <p className="text-xs text-gray-400 mt-0.5">{step.subtitle}</p>
+                            <h3 className="font-bold text-sm text-[var(--foreground)]">{step.title}</h3>
+                            <p className="text-xs text-[var(--muted)] mt-0.5">{step.subtitle}</p>
                           </div>
-                          <p className="text-[11px] text-gray-400 max-w-md mt-1 leading-relaxed">
+                          <p className="text-[11px] text-[var(--muted)] max-w-md mt-1 leading-relaxed">
                             {step.details}
                           </p>
                         </div>
 
                         {isActive && (
-                          <div className="absolute top-2 right-3 flex items-center gap-1.5 text-[11px] text-emerald-400 font-mono">
+                          <div className="absolute top-2 right-3 flex items-center gap-1.5 text-[11px] text-[#C5F52A] font-mono font-bold">
                             <RotateCw className="w-3 h-3 animate-spin" />
                             Executing...
                           </div>
@@ -432,8 +467,8 @@ export function AutomationPipelineView({
                       {/* Connector Arrow */}
                       {idx < PIPELINE_STEPS.length - 1 && (
                         <div className="py-2.5 flex flex-col items-center">
-                          <div className="w-0.5 h-4 bg-white/20" />
-                          <ArrowDown className="w-4 h-4 text-gray-400 -mt-1" />
+                          <div className="w-0.5 h-4 bg-[var(--border)]" />
+                          <ArrowDown className="w-4 h-4 text-[var(--muted)] -mt-1" />
                         </div>
                       )}
                     </React.Fragment>
@@ -444,13 +479,13 @@ export function AutomationPipelineView({
 
             {/* Live Pipeline Execution Logs */}
             {pipelineLogs.length > 0 && (
-              <div className="bg-[#121217] border border-white/10 rounded-xl p-4 font-mono text-xs space-y-1">
-                <div className="text-gray-400 font-semibold mb-2 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 font-mono text-xs space-y-1">
+                <div className="text-[var(--foreground)] font-bold mb-2 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#C5F52A] animate-pulse" />
                   Live Engine Logs
                 </div>
                 {pipelineLogs.map((log, i) => (
-                  <div key={i} className="text-gray-300">
+                  <div key={i} className="text-[var(--muted)]">
                     {log}
                   </div>
                 ))}
@@ -459,15 +494,15 @@ export function AutomationPipelineView({
 
             {/* Generated Deck Review (5 Slides) */}
             {latestDeck && (
-              <div className="bg-[#121217] border border-white/10 rounded-2xl p-6 md:p-8 space-y-6">
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <div className="text-xs font-mono text-emerald-400 uppercase tracking-wider mb-1">
+                    <div className="text-xs font-mono text-[#C5F52A] uppercase tracking-wider mb-1 font-bold">
                       Latest Generated 5-Slide Carousel Deck
                     </div>
-                    <h3 className="text-xl font-bold text-white">{latestDeck.title}</h3>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Status: <span className="text-emerald-400 font-semibold">{latestDeck.status || "READY"}</span> • Theme: <span className="font-mono text-gray-300">{latestDeck.theme}</span>
+                    <h3 className="text-lg sm:text-xl font-bold text-[var(--foreground)]">{latestDeck.title}</h3>
+                    <p className="text-xs text-[var(--muted)] mt-1">
+                      Status: <span className="text-emerald-400 font-semibold">{latestDeck.status || "READY"}</span> • Theme: <span className="font-mono text-[var(--foreground)]">{latestDeck.theme}</span>
                     </p>
                   </div>
 
@@ -475,7 +510,7 @@ export function AutomationPipelineView({
                     {onOpenStudioWithDeck && (
                       <button
                         onClick={() => onOpenStudioWithDeck(latestDeck)}
-                        className="px-3.5 py-2 rounded-lg text-xs font-medium border border-white/20 bg-white/5 hover:bg-white/10 text-white flex items-center gap-1.5 transition-colors"
+                        className="px-3.5 py-2 rounded-xl text-xs font-semibold border border-[var(--border)] bg-[var(--surface-secondary)] hover:bg-[var(--border)] text-[var(--foreground)] flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         Open in Visual Studio
@@ -496,36 +531,35 @@ export function AutomationPipelineView({
                   {latestDeck.slides.slice(0, 5).map((slide, sIdx) => (
                     <div
                       key={slide.id || sIdx}
-                      className="aspect-[4/5] rounded-xl bg-gradient-to-b from-[#181822] to-[#0c0c10] border border-white/10 p-3.5 flex flex-col justify-between relative overflow-hidden group hover:border-emerald-500/40 transition-all shadow-lg"
+                      className="aspect-[4/5] rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border)] p-3.5 flex flex-col justify-between relative overflow-hidden group hover:border-[#C5F52A]/40 transition-all shadow-xs"
                     >
                       {/* Top Bar */}
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="font-mono text-gray-400">
+                        <span className="font-mono text-[var(--muted)]">
                           0{sIdx + 1} / 0{latestDeck.slides.length}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-white/10 text-[9px] font-mono text-emerald-400">
+                        <span className="px-1.5 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[9px] font-mono text-[#C5F52A] font-bold">
                           {slide.label || (sIdx === 0 ? "COVER" : sIdx === 4 ? "CTA" : "STORY")}
                         </span>
                       </div>
 
                       {/* Middle Art / Visual Placeholder */}
-                      <div className="w-full h-24 rounded-lg bg-black/40 border border-white/5 my-auto flex flex-col items-center justify-center p-2 text-center relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-cyan-500/10 to-transparent pointer-events-none" />
-                        <ImageIcon className="w-6 h-6 text-gray-600 mb-1" />
-                        <span className="text-[9px] text-gray-400 line-clamp-2">
+                      <div className="w-full h-24 rounded-xl bg-[var(--surface)] border border-[var(--border)] my-auto flex flex-col items-center justify-center p-2 text-center relative overflow-hidden">
+                        <ImageIcon className="w-6 h-6 text-[var(--muted)] mb-1" />
+                        <span className="text-[9px] text-[var(--muted)] line-clamp-2">
                           {slide.visualPrompt || "Gemini Cinematic 3D Art"}
                         </span>
                       </div>
 
                       {/* Bottom Typography & Logo */}
                       <div className="space-y-1">
-                        <h4 className="text-xs font-bold uppercase leading-tight line-clamp-2 text-white">
+                        <h4 className="text-xs font-bold uppercase leading-tight line-clamp-2 text-[var(--foreground)]">
                           {slide.title}
                         </h4>
-                        <p className="text-[10px] text-gray-400 line-clamp-2 leading-relaxed">
+                        <p className="text-[10px] text-[var(--muted)] line-clamp-2 leading-relaxed">
                           {slide.body}
                         </p>
-                        <div className="pt-1 flex items-center justify-between text-[9px] text-gray-400 border-t border-white/5">
+                        <div className="pt-1 flex items-center justify-between text-[9px] text-[var(--muted)] border-t border-[var(--border)]">
                           <span>{config.brandHandle}</span>
                           <span>✦</span>
                         </div>
@@ -535,9 +569,9 @@ export function AutomationPipelineView({
                 </div>
 
                 {/* Caption & Hashtags Preview */}
-                <div className="bg-[#181820] border border-white/5 rounded-xl p-4 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-gray-400 font-medium">
-                    <span className="flex items-center gap-1.5 text-white">
+                <div className="bg-[var(--surface-secondary)] border border-[var(--border)] rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-[var(--muted)] font-medium">
+                    <span className="flex items-center gap-1.5 text-[var(--foreground)] font-bold">
                       <Instagram className="w-3.5 h-3.5 text-pink-500" />
                       Instagram Caption & Hashtags
                     </span>
@@ -546,19 +580,19 @@ export function AutomationPipelineView({
                         navigator.clipboard.writeText(`${latestDeck.caption}\n\n${latestDeck.hashtags.join(" ")}`);
                         toast.success("Copied caption to clipboard!");
                       }}
-                      className="text-[11px] text-gray-400 hover:text-white transition-colors"
+                      className="text-[11px] font-bold text-[#C5F52A] hover:underline transition-colors cursor-pointer"
                     >
                       Copy text
                     </button>
                   </div>
-                  <p className="text-xs text-gray-300 whitespace-pre-line leading-relaxed">
+                  <p className="text-xs text-[var(--foreground)] whitespace-pre-line leading-relaxed">
                     {latestDeck.caption || "No caption generated"}
                   </p>
                   <div className="flex flex-wrap gap-1.5 pt-2">
                     {latestDeck.hashtags.map((tag, tIdx) => (
                       <span
                         key={tIdx}
-                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-sky-400 border border-white/5"
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)]"
                       >
                         {tag}
                       </span>

@@ -1,0 +1,1242 @@
+[
+  {
+    "id": "log_1794077550496_2t4h",
+    "timestamp": "2026-11-07T18:52:30.496Z",
+    "source_id": "src_040",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3393,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077547853_bxgw",
+    "timestamp": "2026-11-07T18:52:27.853Z",
+    "source_id": "src_037",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 751,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077547851_xf1c",
+    "timestamp": "2026-11-07T18:52:27.851Z",
+    "source_id": "src_036",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 749,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077547848_0tli",
+    "timestamp": "2026-11-07T18:52:27.848Z",
+    "source_id": "src_039",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 745,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077547100_z63w",
+    "timestamp": "2026-11-07T18:52:27.100Z",
+    "source_id": "src_033",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 11971,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077544865_cdwv",
+    "timestamp": "2026-11-07T18:52:24.865Z",
+    "source_id": "src_034",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 9736,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077539985_n2ym",
+    "timestamp": "2026-11-07T18:52:19.985Z",
+    "source_id": "src_032",
+    "status": "success",
+    "items_fetched": 15,
+    "new_items_added": 0,
+    "duration_ms": 4857,
+    "message": "Fetched 15 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077538725_btn6",
+    "timestamp": "2026-11-07T18:52:18.725Z",
+    "source_id": "src_031",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3598,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077538467_mfoc",
+    "timestamp": "2026-11-07T18:52:18.467Z",
+    "source_id": "src_035",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3338,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077535125_rrgc",
+    "timestamp": "2026-11-07T18:52:15.125Z",
+    "source_id": "src_030",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 11316,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077533606_ousq",
+    "timestamp": "2026-11-07T18:52:13.606Z",
+    "source_id": "src_026",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 9799,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077531631_c5y4",
+    "timestamp": "2026-11-07T18:52:11.631Z",
+    "source_id": "src_028",
+    "status": "success",
+    "items_fetched": 24,
+    "new_items_added": 0,
+    "duration_ms": 7822,
+    "message": "Fetched 24 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077530300_kw0e",
+    "timestamp": "2026-11-07T18:52:10.300Z",
+    "source_id": "src_027",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 0,
+    "duration_ms": 6492,
+    "message": "Fetched 20 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077528699_d12o",
+    "timestamp": "2026-11-07T18:52:08.699Z",
+    "source_id": "src_029",
+    "status": "success",
+    "items_fetched": 15,
+    "new_items_added": 0,
+    "duration_ms": 4889,
+    "message": "Fetched 15 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077523805_dx0l",
+    "timestamp": "2026-11-07T18:52:03.805Z",
+    "source_id": "src_023",
+    "status": "success",
+    "items_fetched": 24,
+    "new_items_added": 0,
+    "duration_ms": 7419,
+    "message": "Fetched 24 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077522450_p1j7",
+    "timestamp": "2026-11-07T18:52:02.450Z",
+    "source_id": "src_024",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 0,
+    "duration_ms": 6064,
+    "message": "Fetched 20 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077522266_lwjh",
+    "timestamp": "2026-11-07T18:52:02.266Z",
+    "source_id": "src_021",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 0,
+    "duration_ms": 5882,
+    "message": "Fetched 20 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077519603_gih9",
+    "timestamp": "2026-11-07T18:51:59.603Z",
+    "source_id": "src_022",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3218,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077517300_2leg",
+    "timestamp": "2026-11-07T18:51:57.300Z",
+    "source_id": "src_025",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 914,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077516382_2f09",
+    "timestamp": "2026-11-07T18:51:56.382Z",
+    "source_id": "src_020",
+    "status": "success",
+    "items_fetched": 25,
+    "new_items_added": 0,
+    "duration_ms": 10234,
+    "message": "Fetched 25 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077512586_0aj2",
+    "timestamp": "2026-11-07T18:51:52.586Z",
+    "source_id": "src_016",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 0,
+    "duration_ms": 6439,
+    "message": "Fetched 20 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077509667_deqp",
+    "timestamp": "2026-11-07T18:51:49.667Z",
+    "source_id": "src_018",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3520,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077509664_mmzm",
+    "timestamp": "2026-11-07T18:51:49.664Z",
+    "source_id": "src_017",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3516,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077507032_05jl",
+    "timestamp": "2026-11-07T18:51:47.032Z",
+    "source_id": "src_019",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 883,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077506145_to9o",
+    "timestamp": "2026-11-07T18:51:46.145Z",
+    "source_id": "src_015",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 9919,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077502470_9hxg",
+    "timestamp": "2026-11-07T18:51:42.470Z",
+    "source_id": "src_011",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 0,
+    "duration_ms": 6247,
+    "message": "Fetched 20 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077500712_mjre",
+    "timestamp": "2026-11-07T18:51:40.712Z",
+    "source_id": "src_012",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 4486,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077499365_6gvh",
+    "timestamp": "2026-11-07T18:51:39.365Z",
+    "source_id": "src_014",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3139,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077497051_bx5r",
+    "timestamp": "2026-11-07T18:51:37.051Z",
+    "source_id": "src_013",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 825,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077496222_yfpb",
+    "timestamp": "2026-11-07T18:51:36.222Z",
+    "source_id": "src_009",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 9661,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077495885_949g",
+    "timestamp": "2026-11-07T18:51:35.885Z",
+    "source_id": "src_008",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 9325,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077495719_vrv8",
+    "timestamp": "2026-11-07T18:51:35.719Z",
+    "source_id": "src_007",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 9159,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077490981_ccdb",
+    "timestamp": "2026-11-07T18:51:30.981Z",
+    "source_id": "src_006",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 4422,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077487703_b6wa",
+    "timestamp": "2026-11-07T18:51:27.703Z",
+    "source_id": "src_010",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 1142,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077486558_h0v1",
+    "timestamp": "2026-11-07T18:51:26.558Z",
+    "source_id": "src_001",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 15417,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077482396_7lg8",
+    "timestamp": "2026-11-07T18:51:22.396Z",
+    "source_id": "src_004",
+    "status": "success",
+    "items_fetched": 25,
+    "new_items_added": 0,
+    "duration_ms": 11253,
+    "message": "Fetched 25 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077481051_1bhd",
+    "timestamp": "2026-11-07T18:51:21.051Z",
+    "source_id": "src_003",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 9909,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077472044_i7d5",
+    "timestamp": "2026-11-07T18:51:12.044Z",
+    "source_id": "src_002",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 902,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077472040_0sln",
+    "timestamp": "2026-11-07T18:51:12.040Z",
+    "source_id": "src_005",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 0,
+    "duration_ms": 896,
+    "message": "Fetched 1 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077471392_8xav",
+    "timestamp": "2026-11-07T18:51:11.392Z",
+    "source_id": "src_051",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3412,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077467978_5p1p",
+    "timestamp": "2026-11-07T18:51:07.978Z",
+    "source_id": "src_046",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 12280,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077466426_1mw3",
+    "timestamp": "2026-11-07T18:51:06.426Z",
+    "source_id": "src_048",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 10726,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077459771_sm17",
+    "timestamp": "2026-11-07T18:50:59.771Z",
+    "source_id": "src_050",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 4070,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077457250_uqf2",
+    "timestamp": "2026-11-07T18:50:57.250Z",
+    "source_id": "src_047",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 1550,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077456890_v0zb",
+    "timestamp": "2026-11-07T18:50:56.890Z",
+    "source_id": "src_049",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 1189,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077455697_v137",
+    "timestamp": "2026-11-07T18:50:55.697Z",
+    "source_id": "src_043",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 10810,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077455692_tumr",
+    "timestamp": "2026-11-07T18:50:55.692Z",
+    "source_id": "src_044",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 10804,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077453875_nxve",
+    "timestamp": "2026-11-07T18:50:53.875Z",
+    "source_id": "src_041",
+    "status": "success",
+    "items_fetched": 25,
+    "new_items_added": 0,
+    "duration_ms": 8989,
+    "message": "Fetched 25 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077451851_074m",
+    "timestamp": "2026-11-07T18:50:51.851Z",
+    "source_id": "src_042",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 0,
+    "duration_ms": 6964,
+    "message": "Fetched 20 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077451847_skg5",
+    "timestamp": "2026-11-07T18:50:51.847Z",
+    "source_id": "src_045",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 6957,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077444885_xabx",
+    "timestamp": "2026-11-07T18:50:44.885Z",
+    "source_id": "src_038",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 11255,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077443839_0cvy",
+    "timestamp": "2026-11-07T18:50:43.839Z",
+    "source_id": "src_036",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 10210,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077437684_ro8a",
+    "timestamp": "2026-11-07T18:50:37.684Z",
+    "source_id": "src_040",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 4053,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077437244_5t90",
+    "timestamp": "2026-11-07T18:50:37.244Z",
+    "source_id": "src_039",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 3612,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077437207_b8bw",
+    "timestamp": "2026-11-07T18:50:37.207Z",
+    "source_id": "src_037",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 3577,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077433627_bwmr",
+    "timestamp": "2026-11-07T18:50:33.627Z",
+    "source_id": "src_033",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 12092,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077432415_a07n",
+    "timestamp": "2026-11-07T18:50:32.415Z",
+    "source_id": "src_034",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 10879,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077426526_vx0s",
+    "timestamp": "2026-11-07T18:50:26.526Z",
+    "source_id": "src_032",
+    "status": "success",
+    "items_fetched": 15,
+    "new_items_added": 0,
+    "duration_ms": 4992,
+    "message": "Fetched 15 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077425694_oinb",
+    "timestamp": "2026-11-07T18:50:25.694Z",
+    "source_id": "src_035",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 4157,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077425210_aw45",
+    "timestamp": "2026-11-07T18:50:25.210Z",
+    "source_id": "src_031",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3677,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077421532_84np",
+    "timestamp": "2026-11-07T18:50:21.532Z",
+    "source_id": "src_026",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 11536,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077418220_vf1t",
+    "timestamp": "2026-11-07T18:50:18.220Z",
+    "source_id": "src_028",
+    "status": "success",
+    "items_fetched": 24,
+    "new_items_added": 24,
+    "duration_ms": 8222,
+    "message": "Fetched 24 items, added 24 new stories."
+  },
+  {
+    "id": "log_1794077417002_4g7g",
+    "timestamp": "2026-11-07T18:50:17.002Z",
+    "source_id": "src_027",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 20,
+    "duration_ms": 7004,
+    "message": "Fetched 20 items, added 20 new stories."
+  },
+  {
+    "id": "log_1794077416643_erv6",
+    "timestamp": "2026-11-07T18:50:16.643Z",
+    "source_id": "src_029",
+    "status": "success",
+    "items_fetched": 15,
+    "new_items_added": 15,
+    "duration_ms": 6644,
+    "message": "Fetched 15 items, added 15 new stories."
+  },
+  {
+    "id": "log_1794077410940_prg7",
+    "timestamp": "2026-11-07T18:50:10.940Z",
+    "source_id": "src_030",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 941,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077409993_c5l8",
+    "timestamp": "2026-11-07T18:50:09.993Z",
+    "source_id": "src_023",
+    "status": "success",
+    "items_fetched": 24,
+    "new_items_added": 0,
+    "duration_ms": 8786,
+    "message": "Fetched 24 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077409043_34ge",
+    "timestamp": "2026-11-07T18:50:09.043Z",
+    "source_id": "src_024",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 20,
+    "duration_ms": 7835,
+    "message": "Fetched 20 items, added 20 new stories."
+  },
+  {
+    "id": "log_1794077407432_5uc1",
+    "timestamp": "2026-11-07T18:50:07.432Z",
+    "source_id": "src_021",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 0,
+    "duration_ms": 6227,
+    "message": "Fetched 20 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077406755_v377",
+    "timestamp": "2026-11-07T18:50:06.755Z",
+    "source_id": "src_025",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 5547,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077404526_jbgo",
+    "timestamp": "2026-11-07T18:50:04.526Z",
+    "source_id": "src_022",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3320,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077401203_m77j",
+    "timestamp": "2026-11-07T18:50:01.203Z",
+    "source_id": "src_020",
+    "status": "success",
+    "items_fetched": 25,
+    "new_items_added": 25,
+    "duration_ms": 11558,
+    "message": "Fetched 25 items, added 25 new stories."
+  },
+  {
+    "id": "log_1794077397412_qfw3",
+    "timestamp": "2026-11-07T18:49:57.412Z",
+    "source_id": "src_016",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 20,
+    "duration_ms": 7770,
+    "message": "Fetched 20 items, added 20 new stories."
+  },
+  {
+    "id": "log_1794077395673_ay3g",
+    "timestamp": "2026-11-07T18:49:55.673Z",
+    "source_id": "src_018",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 6030,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077393669_fro4",
+    "timestamp": "2026-11-07T18:49:53.669Z",
+    "source_id": "src_017",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 4026,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077393528_5hhn",
+    "timestamp": "2026-11-07T18:49:53.528Z",
+    "source_id": "src_019",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 3883,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077389640_i518",
+    "timestamp": "2026-11-07T18:49:49.640Z",
+    "source_id": "src_015",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 11186,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077385976_9py2",
+    "timestamp": "2026-11-07T18:49:45.976Z",
+    "source_id": "src_011",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 0,
+    "duration_ms": 7525,
+    "message": "Fetched 20 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077383101_07tj",
+    "timestamp": "2026-11-07T18:49:43.101Z",
+    "source_id": "src_012",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 4649,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077381934_r1fz",
+    "timestamp": "2026-11-07T18:49:41.934Z",
+    "source_id": "src_014",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 3482,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077379368_w0y7",
+    "timestamp": "2026-11-07T18:49:39.368Z",
+    "source_id": "src_013",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 915,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077378450_s4de",
+    "timestamp": "2026-11-07T18:49:38.450Z",
+    "source_id": "src_009",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 13225,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077378115_562k",
+    "timestamp": "2026-11-07T18:49:38.115Z",
+    "source_id": "src_007",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 12892,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077377775_flqt",
+    "timestamp": "2026-11-07T18:49:37.775Z",
+    "source_id": "src_008",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 12551,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077375290_nm99",
+    "timestamp": "2026-11-07T18:49:35.290Z",
+    "source_id": "src_010",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 10064,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077371196_u38d",
+    "timestamp": "2026-11-07T18:49:31.196Z",
+    "source_id": "src_006",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 0,
+    "duration_ms": 5975,
+    "message": "Fetched 10 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077365220_bona",
+    "timestamp": "2026-11-07T18:49:25.220Z",
+    "source_id": "src_004",
+    "status": "success",
+    "items_fetched": 25,
+    "new_items_added": 0,
+    "duration_ms": 13845,
+    "message": "Fetched 25 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077364587_qqd9",
+    "timestamp": "2026-11-07T18:49:24.587Z",
+    "source_id": "src_001",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 13222,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077363970_kekj",
+    "timestamp": "2026-11-07T18:49:23.970Z",
+    "source_id": "src_003",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 12596,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077353447_zkgt",
+    "timestamp": "2026-11-07T18:49:13.447Z",
+    "source_id": "src_005",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 2071,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077352691_plv1",
+    "timestamp": "2026-11-07T18:49:12.691Z",
+    "source_id": "src_002",
+    "status": "success",
+    "items_fetched": 1,
+    "new_items_added": 1,
+    "duration_ms": 1318,
+    "message": "Fetched 1 items, added 1 new stories."
+  },
+  {
+    "id": "log_1794077054411_g4vw",
+    "timestamp": "2026-11-07T18:44:14.411Z",
+    "source_id": "src_093",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 400,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077054009_r66j",
+    "timestamp": "2026-11-07T18:44:14.009Z",
+    "source_id": "src_092",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 2532,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077051476_2aap",
+    "timestamp": "2026-11-07T18:44:11.476Z",
+    "source_id": "src_091",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 374,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077051101_qxvz",
+    "timestamp": "2026-11-07T18:44:11.101Z",
+    "source_id": "src_082",
+    "status": "success",
+    "items_fetched": 15,
+    "new_items_added": 15,
+    "duration_ms": 655,
+    "message": "Fetched 15 items, added 15 new stories."
+  },
+  {
+    "id": "log_1794077050444_7snv",
+    "timestamp": "2026-11-07T18:44:10.444Z",
+    "source_id": "src_081",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 1343,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077049099_s6rd",
+    "timestamp": "2026-11-07T18:44:09.099Z",
+    "source_id": "src_079",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 237,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077048860_9x7b",
+    "timestamp": "2026-11-07T18:44:08.860Z",
+    "source_id": "src_074",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 3357,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077045502_ywlj",
+    "timestamp": "2026-11-07T18:44:05.502Z",
+    "source_id": "src_073",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 1113,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077044387_af2l",
+    "timestamp": "2026-11-07T18:44:04.387Z",
+    "source_id": "src_063",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 439,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077043948_940k",
+    "timestamp": "2026-11-07T18:44:03.948Z",
+    "source_id": "src_062",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 20,
+    "duration_ms": 1791,
+    "message": "Fetched 20 items, added 20 new stories."
+  },
+  {
+    "id": "log_1794077042156_agyk",
+    "timestamp": "2026-11-07T18:44:02.156Z",
+    "source_id": "src_061",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 1218,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077040936_3ref",
+    "timestamp": "2026-11-07T18:44:00.936Z",
+    "source_id": "src_053",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 135,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077040800_lika",
+    "timestamp": "2026-11-07T18:44:00.800Z",
+    "source_id": "src_052",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 20,
+    "duration_ms": 256,
+    "message": "Fetched 20 items, added 20 new stories."
+  },
+  {
+    "id": "log_1794077040543_lq8d",
+    "timestamp": "2026-11-07T18:44:00.543Z",
+    "source_id": "src_051",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 239,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077040302_uo7b",
+    "timestamp": "2026-11-07T18:44:00.302Z",
+    "source_id": "src_043",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 151,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077040150_4tsx",
+    "timestamp": "2026-11-07T18:44:00.151Z",
+    "source_id": "src_042",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 20,
+    "duration_ms": 298,
+    "message": "Fetched 20 items, added 20 new stories."
+  },
+  {
+    "id": "log_1794077039851_srjs",
+    "timestamp": "2026-11-07T18:43:59.851Z",
+    "source_id": "src_041",
+    "status": "success",
+    "items_fetched": 25,
+    "new_items_added": 25,
+    "duration_ms": 231,
+    "message": "Fetched 25 items, added 25 new stories."
+  },
+  {
+    "id": "log_1794077039619_p3h6",
+    "timestamp": "2026-11-07T18:43:59.619Z",
+    "source_id": "src_033",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 863,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794077038755_0fok",
+    "timestamp": "2026-11-07T18:43:58.755Z",
+    "source_id": "src_032",
+    "status": "success",
+    "items_fetched": 15,
+    "new_items_added": 15,
+    "duration_ms": 215,
+    "message": "Fetched 15 items, added 15 new stories."
+  },
+  {
+    "id": "log_1794077038538_26hn",
+    "timestamp": "2026-11-07T18:43:58.538Z",
+    "source_id": "src_031",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 1147,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077037390_ohed",
+    "timestamp": "2026-11-07T18:43:57.390Z",
+    "source_id": "src_023",
+    "status": "success",
+    "items_fetched": 24,
+    "new_items_added": 24,
+    "duration_ms": 1516,
+    "message": "Fetched 24 items, added 24 new stories."
+  },
+  {
+    "id": "log_1794077035873_4uyr",
+    "timestamp": "2026-11-07T18:43:55.873Z",
+    "source_id": "src_022",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 249,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077035623_ohm8",
+    "timestamp": "2026-11-07T18:43:55.623Z",
+    "source_id": "src_021",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 10,
+    "duration_ms": 48,
+    "message": "Fetched 20 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077035574_uyv1",
+    "timestamp": "2026-11-07T18:43:55.574Z",
+    "source_id": "src_014",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 146,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077035427_cntn",
+    "timestamp": "2026-11-07T18:43:55.427Z",
+    "source_id": "src_012",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 1238,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794077034187_k3uu",
+    "timestamp": "2026-11-07T18:43:54.187Z",
+    "source_id": "src_011",
+    "status": "success",
+    "items_fetched": 20,
+    "new_items_added": 20,
+    "duration_ms": 172,
+    "message": "Fetched 20 items, added 20 new stories."
+  },
+  {
+    "id": "log_1794077034014_omk7",
+    "timestamp": "2026-11-07T18:43:54.014Z",
+    "source_id": "src_004",
+    "status": "success",
+    "items_fetched": 25,
+    "new_items_added": 0,
+    "duration_ms": 3622,
+    "message": "Fetched 25 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077030391_faj8",
+    "timestamp": "2026-11-07T18:43:50.391Z",
+    "source_id": "src_003",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 298,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794077030091_ykcw",
+    "timestamp": "2026-11-07T18:43:50.091Z",
+    "source_id": "src_001",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 0,
+    "duration_ms": 293,
+    "message": "Fetched 30 items, added 0 new stories."
+  },
+  {
+    "id": "log_1794076996456_1jv1",
+    "timestamp": "2026-11-07T18:43:16.456Z",
+    "source_id": "src_007",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 532,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794076995923_o6mo",
+    "timestamp": "2026-11-07T18:43:15.923Z",
+    "source_id": "src_006",
+    "status": "success",
+    "items_fetched": 10,
+    "new_items_added": 10,
+    "duration_ms": 1364,
+    "message": "Fetched 10 items, added 10 new stories."
+  },
+  {
+    "id": "log_1794076994558_ec04",
+    "timestamp": "2026-11-07T18:43:14.558Z",
+    "source_id": "src_004",
+    "status": "success",
+    "items_fetched": 25,
+    "new_items_added": 25,
+    "duration_ms": 3272,
+    "message": "Fetched 25 items, added 25 new stories."
+  },
+  {
+    "id": "log_1794076991285_b5z8",
+    "timestamp": "2026-11-07T18:43:11.285Z",
+    "source_id": "src_003",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 630,
+    "message": "Fetched 30 items, added 30 new stories."
+  },
+  {
+    "id": "log_1794076990654_zhqe",
+    "timestamp": "2026-11-07T18:43:10.654Z",
+    "source_id": "src_001",
+    "status": "success",
+    "items_fetched": 30,
+    "new_items_added": 30,
+    "duration_ms": 355,
+    "message": "Fetched 30 items, added 30 new stories."
+  }
+]

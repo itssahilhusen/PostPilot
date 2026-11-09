@@ -22,7 +22,9 @@ import {
   Flame,
   Clock,
   Layers,
+  Globe,
 } from "lucide-react";
+import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -646,6 +648,14 @@ export function IdeasView({ onOpenComposer, onGenerateCarousel }: IdeasViewProps
               <FileSpreadsheet className="size-3 text-emerald-500" />
               <span>OPML</span>
             </button>
+            <Link
+              href="/news-sources"
+              className="py-1.5 px-2 rounded-lg border border-sky-500/30 bg-sky-500/10 text-[11px] font-bold text-sky-400 hover:bg-sky-500/20 transition-colors truncate text-center cursor-pointer flex items-center justify-center gap-1 col-span-3 mt-1 shadow-sm"
+              title="100 Curated Tech & AI Sources with Real-time AI Summaries"
+            >
+              <Globe className="size-3 text-sky-400" />
+              <span>The AI Seed • 100 Sources Hub</span>
+            </Link>
           </div>
 
           {/* Category Filter Chips */}

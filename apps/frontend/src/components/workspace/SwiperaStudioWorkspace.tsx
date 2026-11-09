@@ -74,6 +74,9 @@ import { CalendarView } from "./CalendarView";
 import { DailyFlywheelModal } from "./DailyFlywheelModal";
 import { DailyFlywheelAlertBanner } from "./DailyFlywheelAlertBanner";
 import { AutomationPipelineView } from "./AutomationPipelineView";
+import { SignalArraySidebar } from "@/components/design-system/SignalArraySidebar";
+import { Sidebar } from "@/components/design-system/Sidebar";
+import { TopHeader } from "@/components/design-system/TopHeader";
 
 const ComposerSheet = dynamic(() => import("./ComposerSheet").then((mod) => mod.ComposerSheet));
 const AuthForm = dynamic(() => import("@/components/auth/AuthForm").then((mod) => mod.AuthForm));
@@ -391,7 +394,6 @@ export function SwiperaStudioWorkspace({
       id: "slide_1",
       type: "cover",
       label: "ACTION",
-      emoji: "🤖",
       title: "Turn Ideas into Visual Carousels",
       body: "Paste any article link, notes, or research to generate high-converting slides in seconds.",
       items: [],
@@ -536,7 +538,7 @@ export function SwiperaStudioWorkspace({
   const inspectorImageInputRef = useRef<HTMLInputElement>(null);
   const refTemplateInputRef = useRef<HTMLInputElement>(null);
 
-  const [sourceMode, setSourceMode] = useState<"text" | "file" | "url" | "manual">("url");
+  const [sourceMode, setSourceMode] = useState<"text" | "url" | "manual">("text");
   const [rawContent, setRawContent] = useState("");
   const [isDragOverFile, setIsDragOverFile] = useState(false);
   const [uploadedDoc, setUploadedDoc] = useState<{ name: string; size: string; type: string } | null>(null);
@@ -613,8 +615,9 @@ export function SwiperaStudioWorkspace({
     document.documentElement.classList.add("studio-mode");
 
     try {
-      const storedTheme = localStorage.getItem("swipera-theme");
-      const isDark = storedTheme === "dark" || document.documentElement.classList.contains("dark");
+      const queryTheme = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("theme") : null;
+      const storedTheme = queryTheme || localStorage.getItem("swipera-theme") || localStorage.getItem("reerts-theme");
+      const isDark = storedTheme !== "light";
       setIsDarkTheme(isDark);
       if (isDark) {
         document.documentElement.classList.add("dark");
@@ -780,6 +783,8 @@ export function SwiperaStudioWorkspace({
     const modePromptMap: Record<string, string> = {
       shorter: "Make it punchier, concise, and higher-impact",
       numbers: "Include concrete metrics, stats, or numbers",
+      fit: "Refine word count to perfectly fit the slide card without overflow",
+      longer: "Expand with thoughtful detail, context, and clear explanation",
       hook: "Rephrase title into a curiosity-inducing question hook",
       emotional: "Make it more empathetic, relatable, and evocative",
       professional: "Make it more authoritative, structured, and professional",
@@ -1010,11 +1015,15 @@ export function SwiperaStudioWorkspace({
 
   // Real URL Fetch Handler - calls /api/extract-url
   const handleFetchUrl = async (targetUrl?: string) => {
+    if (isFetchingUrl) return;
     const raw = typeof targetUrl === "string" ? targetUrl : webUrl;
-    const trimmed = raw.trim();
-    if (!trimmed || !/^https?:\/\//i.test(trimmed)) {
-      toast.error("Please enter a valid URL starting with http:// or https://");
+    let trimmed = (raw || "").trim().replace(/^["'<(\s]+|["'>)\s]+$/g, "");
+    if (!trimmed) {
+      toast.error("Please enter a web URL to extract.");
       return;
+    }
+    if (!/^https?:\/\//i.test(trimmed)) {
+      trimmed = "https://" + trimmed;
     }
     setWebUrl(trimmed);
     setIsFetchingUrl(true);
@@ -1025,7 +1034,13 @@ export function SwiperaStudioWorkspace({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed }),
       });
-      const data = await res.json();
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Failed to extract URL (Status ${res.status})`);
+      }
       if (!res.ok) {
         throw new Error(data.error || "Failed to extract content from web URL.");
       }
@@ -1064,6 +1079,30 @@ export function SwiperaStudioWorkspace({
       setIsFetchingUrl(false);
     }
   };
+
+  // Auto-load incoming article from News Intelligence Hub
+  const autoLoadedUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!searchParams) return;
+    const urlParam = searchParams.get("url");
+    const titleParam = searchParams.get("title");
+    const summaryParam = searchParams.get("summary");
+
+    if (urlParam && autoLoadedUrlRef.current !== urlParam) {
+      autoLoadedUrlRef.current = urlParam;
+      setSourceMode("url");
+      setWebUrl(urlParam);
+      if (titleParam) {
+        setProjectTitle(titleParam);
+      }
+      if (summaryParam) {
+        setRawContent(summaryParam);
+      }
+      setTimeout(() => {
+        handleFetchUrl(urlParam);
+      }, 150);
+    }
+  }, [searchParams]);
 
   const handleClearExtractedSource = () => {
     setExtractedSource(null);
@@ -1450,9 +1489,18 @@ export function SwiperaStudioWorkspace({
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // Authentic Swipera Studio Create Tab: 4 Source Modes (URL, Text, File, Manual)
+  // Authentic Swipera Studio Create Tab: 4 Source Modes (Text, File, URL, Images)
   const renderCreateContent = (panelSide: "left" | "right" = "left") => {
     const primaryImg = uploadedSocialImages[0];
+    const currentPlatformData = [
+      { id: "instagram", name: "Instagram", icon: "fa-brands fa-instagram", color: "#E1306C", ratio: "4:5", rec: "6~10" },
+      { id: "threads", name: "Threads", icon: "fa-brands fa-threads", color: "#000000", ratio: "4:5", rec: "4~8" },
+      { id: "linkedin", name: "LinkedIn", icon: "fa-brands fa-linkedin-in", color: "#0A66C2", ratio: "4:5", rec: "8~12" },
+      { id: "tiktok", name: "TikTok", icon: "fa-brands fa-tiktok", color: "#010101", ratio: "9:16", rec: "6~12" },
+      { id: "facebook", name: "Facebook", icon: "fa-brands fa-facebook-f", color: "#1877F2", ratio: "1:1", rec: "4~8" },
+      { id: "x", name: "X", icon: "fa-brands fa-x-twitter", color: "#000000", ratio: "16:9", rec: "2~4" },
+    ];
+    const activePlat = currentPlatformData.find((p) => p.id === selectedPlatformId) || currentPlatformData[0];
 
     return (
       <div className="space-y-4 animate-in fade-in duration-150">
@@ -1479,106 +1527,154 @@ export function SwiperaStudioWorkspace({
           <p className="panel-desc text-xs text-[var(--muted)] mt-0.5">
             {sourceMode === "manual"
               ? "Upload social media images (4:5, 1:1, 9:16) and assemble slides."
-              : "Generate high-converting social slides from text notes, web articles, or documents."}
+              : "Paste any text — a brief, blog post, newsletter, notes."}
           </p>
         </div>
 
-        {/* 4-Source Mode Segmented Switcher (#src-mode) */}
-        <div id="src-mode" className="flex p-0.5 rounded-xl bg-[var(--bg)] border border-[var(--line)] w-full overflow-hidden">
-          {[
-            { id: "url", label: "Web URL", icon: "fa-globe" },
-            { id: "text", label: "Text", icon: "fa-pen-to-square" },
-            { id: "file", label: "PDF / Doc", icon: "fa-file-lines" },
-            { id: "manual", label: "Images", icon: "fa-images" },
-          ].map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              onClick={() => setSourceMode(mode.id as any)}
-              className={cn(
-                "flex-1 min-w-0 py-1.5 px-1 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer truncate",
-                sourceMode === mode.id
-                  ? "bg-[#c6f432] text-[#141414] shadow-xs"
-                  : "text-[var(--muted)] hover:text-[var(--fg)]"
-              )}
-              title={mode.label}
-            >
-              <i className={cn("fas", mode.icon, "text-[10px] shrink-0")} />
-              <span className="truncate">{mode.label}</span>
-            </button>
-          ))}
+        {/* 3-Source Mode Segmented Switcher (#src-mode) */}
+        <div className="seg" id="src-mode">
+          <button
+            type="button"
+            data-v="text"
+            onClick={() => setSourceMode("text")}
+            className={cn(sourceMode === "text" && "active")}
+          >
+            <i className="fas fa-align-left mr-1" />
+            <span>Text</span>
+          </button>
+          <button
+            type="button"
+            data-v="url"
+            onClick={() => setSourceMode("url")}
+            className={cn(sourceMode === "url" && "active")}
+          >
+            <i className="fas fa-link mr-1" />
+            <span>Web URL</span>
+          </button>
+          <button
+            type="button"
+            data-v="manual"
+            onClick={() => setSourceMode("manual")}
+            className={cn(sourceMode === "manual" && "active")}
+          >
+            <i className="fas fa-images mr-1" />
+            <span>Images</span>
+          </button>
         </div>
 
         {/* =========================================================================
-            1. WEB URL SOURCE MODE (#src-url)
+            1. TEXT SOURCE MODE (#src-text) - Default in Swipera
+            ========================================================================= */}
+        {sourceMode === "text" && (
+          <div className="space-y-3 animate-in fade-in duration-150">
+            <div id="src-text" className="relative">
+              <textarea
+                id="content-input"
+                rows={10}
+                value={rawContent}
+                onChange={(e) => setRawContent(e.target.value)}
+                onPaste={(e) => {
+                  const pasted = (e.clipboardData || (window as any).clipboardData)?.getData("text")?.trim() || "";
+                  if (/^https?:\/\/\S+$/i.test(pasted) && !rawContent.trim()) {
+                    e.preventDefault();
+                    setSourceMode("url");
+                    setWebUrl(pasted);
+                    setTimeout(() => handleFetchUrl(pasted), 50);
+                  }
+                }}
+                placeholder={'e.g. 5 morning habits for busy professionals — a glass of water on waking, 10-min stretch, write top 3 priorities, no phone for 30 min, protein breakfast. End with "small habits change your day".'}
+                className="field resize-y leading-relaxed text-xs"
+              />
+              <span id="char-count" className="absolute right-3 bottom-2 text-[10px] text-[var(--muted)] pointer-events-none">
+                {rawContent.length}
+              </span>
+            </div>
+
+            {/* Sample Prompts Chips (#sample-prompts) */}
+            <div id="sample-prompts" className="flex flex-wrap gap-1.5">
+              {SWIPERA_SAMPLE_PROMPTS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    setRawContent(s.text);
+                    setProjectTitle(s.label);
+                    toast.success(`Inserted sample: ${s.label}`);
+                  }}
+                  className="chip cursor-pointer"
+                >
+                  ✨ {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            2. WEB URL SOURCE MODE (#src-url)
             ========================================================================= */}
         {sourceMode === "url" && (
           <div id="src-url" className="space-y-2.5 animate-in fade-in duration-150">
-            {/* Clean URL Input Bar matching Swipera */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-[var(--fg)] block">
                 Web Article or Blog URL
               </label>
               <div className="flex gap-1.5">
-                <div className="relative flex-1 min-w-0">
-                  <input
-                    id="src-url-input"
-                    type="url"
-                    value={webUrl}
-                    onChange={(e) => setWebUrl(e.target.value)}
-                    onPaste={(e) => {
-                      const pasted = (e.clipboardData || (window as any).clipboardData)?.getData("text") || "";
-                      if (/^https?:\/\/\S+$/i.test(pasted.trim())) {
-                        setWebUrl(pasted.trim());
-                        setTimeout(() => handleFetchUrl(pasted.trim()), 50);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleFetchUrl();
-                      }
-                    }}
-                    placeholder="https://example.com/article..."
-                    className="field text-xs pl-7 pr-7 h-9 w-full"
-                  />
-                  <i className="fas fa-link absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[var(--muted)]" />
-                  {webUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setWebUrl("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--fg)] cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
+                <input
+                  id="src-url-input"
+                  type="url"
+                  value={webUrl}
+                  onChange={(e) => setWebUrl(e.target.value)}
+                  onPaste={(e) => {
+                    const pasted = (e.clipboardData || (window as any).clipboardData)?.getData("text") || "";
+                    const trimmed = pasted.trim();
+                    if (trimmed) {
+                      const finalUrl = /^https?:\/\//i.test(trimmed) ? trimmed : "https://" + trimmed;
+                      setWebUrl(finalUrl);
+                      setTimeout(() => handleFetchUrl(finalUrl), 50);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleFetchUrl();
+                    }
+                  }}
+                  placeholder="https://example.com/press/…"
+                  className="field flex-1 text-xs"
+                  inputMode="url"
+                />
                 <button
                   id="btn-fetch-url"
                   type="button"
                   disabled={isFetchingUrl || !webUrl.trim()}
                   onClick={() => handleFetchUrl()}
-                  className="btn-sm btn-primary h-9 px-3 shrink-0 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                  title="Extract text and images from web page"
+                  className="btn-sm btn-primary shrink-0 cursor-pointer disabled:opacity-50 flex items-center gap-1.5 px-3 font-semibold"
+                  title="Fetch web page"
                 >
                   {isFetchingUrl ? (
-                    <i className="fas fa-circle-notch fa-spin text-xs" />
+                    <>
+                      <i className="fas fa-circle-notch fa-spin text-xs" />
+                      <span>Fetching...</span>
+                    </>
                   ) : (
-                    <i className="fas fa-download text-xs" />
+                    <>
+                      <i className="fas fa-download text-xs" />
+                      <span>Fetch</span>
+                    </>
                   )}
-                  <span className="text-xs font-bold">{isFetchingUrl ? "Extracting..." : "Fetch"}</span>
                 </button>
               </div>
-              <p className="text-[11px] text-[var(--muted)] mt-1.5 leading-relaxed">
-                Paste any news, blog, or article URL to automatically extract content and media.
+              <p className="text-[11px] text-[var(--muted)]">
+                News articles, press pages, blogs, public Notion pages. PDF links supported.
               </p>
             </div>
 
             {/* Extracted Source Preview Card (#src-card) */}
             {extractedSource && (
-              <div id="src-card" className="p-3 rounded-xl border border-[var(--line)] bg-[var(--bg)] space-y-3 animate-in fade-in">
-                <div className="flex items-start gap-3">
-                  <div id="src-thumb" className="w-14 h-14 rounded-lg overflow-hidden bg-[var(--panel)] border border-[var(--line)] shrink-0 flex items-center justify-center">
+              <div id="src-card" className="rounded-xl border border-[var(--line)] bg-[var(--bg)] p-3 animate-in fade-in space-y-2">
+                <div className="flex gap-3">
+                  <div id="src-thumb" className="w-14 h-14 rounded-lg bg-[var(--hover)] grid place-items-center text-[var(--muted)] overflow-hidden shrink-0">
                     {extractedSource.image ? (
                       <img
                         src={`/api/proxy-image?url=${encodeURIComponent(extractedSource.image)}`}
@@ -1589,14 +1685,14 @@ export function SwiperaStudioWorkspace({
                         }}
                       />
                     ) : (
-                      <i className="fas fa-globe text-lg text-[var(--muted)]" />
+                      <i className="fas fa-file-lines text-xl" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div id="src-title" className="text-xs font-black text-[var(--fg)] line-clamp-2 leading-snug">
+                    <div id="src-title" className="text-sm font-semibold truncate text-[var(--fg)]">
                       {extractedSource.title || "Web Article"}
                     </div>
-                    <div id="src-meta" className="text-[10px] text-[var(--muted)] mt-1 truncate">
+                    <div id="src-meta" className="text-[11px] text-[var(--muted)] truncate">
                       {[
                         extractedSource.siteName,
                         extractedSource.published ? new Date(extractedSource.published).toLocaleDateString() : null,
@@ -1605,39 +1701,35 @@ export function SwiperaStudioWorkspace({
                         .filter(Boolean)
                         .join(" · ")}
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5">
+                    <div className="flex gap-1 mt-1.5">
                       <button
                         id="btn-src-view"
                         type="button"
                         onClick={() => setIsViewSourceModalOpen(true)}
-                        className="text-[11px] text-[#365300] dark:text-[#c6f432] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        className="btn-sm h-7 text-[11px]"
                       >
-                        <i className="fas fa-file-lines text-[10px]" />
-                        <span>View / Edit Source</span>
+                        <i className="fas fa-eye" /> <span>View/edit source</span>
                       </button>
                       <button
                         id="btn-src-clear"
                         type="button"
                         onClick={handleClearExtractedSource}
-                        className="text-[11px] text-red-500 font-bold hover:underline flex items-center gap-1 cursor-pointer ml-auto"
+                        className="btn-sm h-7 text-[11px] text-red-500"
                       >
-                        <i className="fas fa-xmark text-[10px]" />
-                        <span>Clear</span>
+                        <i className="fas fa-xmark" />
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Cover Image Toggle */}
-                <label id="src-image-toggle-wrap" className="flex items-center gap-2 p-2 rounded-lg bg-[var(--panel)] border border-[var(--line)] cursor-pointer text-xs font-bold text-[var(--fg)]">
+                <label className="toggle mt-2 text-xs flex items-center gap-2 cursor-pointer" id="src-image-toggle-wrap">
                   <input
                     id="src-use-image"
                     type="checkbox"
                     checked={useHeroOnCover}
                     onChange={(e) => setUseHeroOnCover(e.target.checked)}
-                    className="accent-[#c6f432] w-4 h-4 rounded cursor-pointer"
                   />
-                  <span>Put hero image on cover slide</span>
+                  <span>Use hero image on cover</span>
                 </label>
 
                 {/* Extracted Images Gallery (#src-gallery-wrap) */}
@@ -1705,144 +1797,6 @@ export function SwiperaStudioWorkspace({
         )}
 
         {/* =========================================================================
-            2. TEXT SOURCE MODE (#src-text)
-            ========================================================================= */}
-        {sourceMode === "text" && (
-          <div id="src-text" className="space-y-3 animate-in fade-in duration-150">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-[var(--fg)]">
-                  Prompt or Raw Text
-                </label>
-                <span id="char-count" className="text-[10px] text-[var(--muted)] font-mono">
-                  {rawContent.length.toLocaleString()} chars
-                </span>
-              </div>
-              <textarea
-                id="content-input"
-                rows={6}
-                value={rawContent}
-                onChange={(e) => setRawContent(e.target.value)}
-                onPaste={(e) => {
-                  const pasted = (e.clipboardData || (window as any).clipboardData)?.getData("text")?.trim() || "";
-                  if (/^https?:\/\/\S+$/i.test(pasted) && !rawContent.trim()) {
-                    e.preventDefault();
-                    setSourceMode("url");
-                    setWebUrl(pasted);
-                    setTimeout(() => handleFetchUrl(pasted), 50);
-                  }
-                }}
-                placeholder="Paste your ideas, articles, notes, or transcript to generate carousel slides..."
-                className="field text-xs resize-none leading-relaxed p-3"
-              />
-            </div>
-
-            {/* Sample Prompts Chips (#sample-prompts) */}
-            <div className="space-y-1.5">
-              <div className="text-[11px] font-bold text-[var(--muted)] flex items-center justify-between">
-                <span>Sample Inspiration Prompts</span>
-                <span className="text-[10px] font-mono text-[var(--muted)]">Click to insert</span>
-              </div>
-              <div id="sample-prompts" className="flex flex-wrap gap-1.5">
-                {SWIPERA_SAMPLE_PROMPTS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => {
-                      setRawContent(s.text);
-                      setProjectTitle(s.label);
-                      toast.success(`Inserted sample: ${s.label}`);
-                    }}
-                    className="chip text-[11px] py-1 px-2.5 rounded-full border border-[var(--line)] bg-[var(--panel)] text-[var(--muted)] hover:text-[var(--fg)] hover:border-[var(--muted)] cursor-pointer transition-all flex items-center gap-1"
-                  >
-                    <i className="fas fa-bolt text-[10px] text-amber-500" />
-                    <span>{s.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* =========================================================================
-            3. FILE SOURCE MODE (#src-file)
-            ========================================================================= */}
-        {sourceMode === "file" && (
-          <div id="src-file" className="space-y-3 animate-in fade-in duration-150">
-            <input
-              id="src-file-input"
-              type="file"
-              accept=".pdf,.docx,.doc,.txt,.md"
-              onChange={(e) => {
-                if (e.target.files?.[0]) handleDocumentFile(e.target.files[0]);
-              }}
-              className="hidden"
-            />
-
-            {uploadedDoc ? (
-              <div className="p-3 rounded-xl border border-[var(--line)] bg-[var(--bg)] flex items-center justify-between">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-[#c6f432]/20 text-[#365300] dark:text-[#c6f432] flex items-center justify-center shrink-0">
-                    <FileCheck className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-[var(--fg)] truncate">{uploadedDoc.name}</div>
-                    <div className="text-[10px] text-[var(--muted)] font-mono">
-                      {uploadedDoc.size} · {uploadedDoc.type}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUploadedDoc(null);
-                    setRawContent("");
-                  }}
-                  className="p-1 hover:text-red-500 text-[var(--muted)] transition-colors cursor-pointer"
-                  title="Remove file"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                id="file-drop"
-                type="button"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragOverFile(true);
-                }}
-                onDragLeave={() => setIsDragOverFile(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragOverFile(false);
-                  if (e.dataTransfer.files?.[0]) {
-                    handleDocumentFile(e.dataTransfer.files[0]);
-                  }
-                }}
-                onClick={() => document.getElementById("src-file-input")?.click()}
-                className={cn(
-                  "w-full py-6 px-3 rounded-xl border-2 border-dashed text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 group",
-                  isDragOverFile
-                    ? "border-[#c6f432] bg-[#c6f432]/10"
-                    : "border-[var(--line)] hover:border-[#c6f432] bg-[var(--bg)]"
-                )}
-              >
-                <div className="w-10 h-10 rounded-xl bg-[var(--panel)] border border-[var(--line)] flex items-center justify-center text-[var(--fg)] shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                  <FileUp className="w-5 h-5 text-[#365300] dark:text-[#c6f432]" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-[var(--fg)]">
-                    {isDragOverFile ? "Drop document here" : "Upload document (PDF, Word, TXT, MD)"}
-                  </div>
-                  <div className="text-[10px] text-[var(--muted)] mt-0.5">Click or drag file to upload (up to 20MB)</div>
-                </div>
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* =========================================================================
             4. MANUAL SOCIAL IMAGES MODE (#src-manual)
             ========================================================================= */}
         {sourceMode === "manual" && (
@@ -1880,286 +1834,238 @@ export function SwiperaStudioWorkspace({
                   ?.click()
               }
               className={cn(
-                "w-full py-4 px-3 rounded-xl border-2 border-dashed text-center cursor-pointer transition-all flex items-center justify-center gap-3 group",
+                "w-full py-6 px-3 rounded-xl border-2 border-dashed text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 group",
                 isDragOverFile
-                  ? "border-[#c6f432] bg-[#c6f432]/10"
-                  : "border-[var(--line)] hover:border-[#c6f432] bg-[var(--bg)]"
+                  ? "border-[var(--brand-ink)] bg-[var(--brand-soft)]"
+                  : "border-[var(--line)] hover:border-[var(--brand-ink)] bg-[var(--bg)]"
               )}
             >
               <div className="w-10 h-10 rounded-xl bg-[var(--panel)] border border-[var(--line)] flex items-center justify-center text-[var(--fg)] shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                <Upload className="w-5 h-5 text-[#365300] dark:text-[#c6f432]" />
+                <i className="fas fa-cloud-arrow-up text-xl text-[var(--brand-ink)]" />
               </div>
-              <div className="text-left min-w-0 flex-1 truncate">
-                <div className="text-xs font-black text-[var(--fg)] flex items-center gap-1.5 truncate">
-                  <span className="truncate">{isDragOverFile ? "Drop images here" : "Upload Social Media Images"}</span>
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#c6f432] text-black font-bold shrink-0">
-                    Multi-select
-                  </span>
+              <div>
+                <div className="text-xs font-bold text-[var(--fg)]">
+                  {isDragOverFile ? "Drop images here" : "Upload social media images"}
                 </div>
-                <div className="text-[10px] text-[var(--muted)] leading-tight mt-0.5 truncate">
-                  Supports PNG, JPG, WebP, GIF • 1-20 slides
-                </div>
+                <div className="text-[10px] text-[var(--muted)] mt-0.5">Click or drag images (PNG, JPG, WebP)</div>
               </div>
             </button>
-
-            {primaryImg && (
-              <div className="p-3.5 rounded-xl border border-[var(--line)] bg-[var(--bg)] space-y-3 animate-in fade-in">
-                <div className="flex items-center justify-between border-b border-[var(--line)] pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs font-black text-[var(--fg)]">Detected Format</span>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#c6f432] text-black">
-                    {primaryImg.aspectRatioStr}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                  <div className="p-2 rounded-lg bg-[var(--panel)] border border-[var(--line)]">
-                    <div className="text-[10px] text-[var(--muted)] font-mono">Resolution</div>
-                    <div className="text-xs font-bold text-[var(--fg)] mt-0.5">
-                      {primaryImg.width} × {primaryImg.height}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-[var(--panel)] border border-[var(--line)]">
-                    <div className="text-[10px] text-[var(--muted)] font-mono">Total Uploaded</div>
-                    <div className="text-xs font-bold text-[var(--fg)] mt-0.5">
-                      {uploadedSocialImages.length} slides
-                    </div>
-                  </div>
-                </div>
-
-                {/* Uploaded Images Strip */}
-                <div className="space-y-2 pt-2 border-t border-[var(--line)]">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-[var(--muted)]">
-                    <span>Uploaded Slides ({uploadedSocialImages.length})</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        document
-                          .getElementById(panelSide === "left" ? "manual-file-input" : "manual-file-input-right")
-                          ?.click()
-                      }
-                      className="text-[10px] text-[#365300] dark:text-[#c6f432] hover:underline cursor-pointer flex items-center gap-1 font-bold"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Upload More</span>
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-4 gap-1.5 max-h-[140px] overflow-y-auto p-1 rounded-lg bg-[var(--panel)]">
-                    {uploadedSocialImages.map((img, i) => (
-                      <div
-                        key={img.id}
-                        onClick={() => setCurrentSlideIndex(i)}
-                        className={cn(
-                          "aspect-square rounded-md overflow-hidden relative cursor-pointer border transition-all group",
-                          currentSlideIndex === i
-                            ? "border-[#c6f432] ring-2 ring-[#c6f432]/40"
-                            : "border-[var(--line)] opacity-80 hover:opacity-100"
-                        )}
-                        title={`Slide ${i + 1}: ${img.name}`}
-                      >
-                        <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                        <span className="absolute top-1 left-1 text-[8px] font-mono font-bold px-1 rounded bg-black/70 text-white">
-                          {i === 0 ? "COVER" : i + 1}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {/* =========================================================================
-            AI GENERATION & PLATFORM OPTIONS (Rendered for URL, Text, and File modes)
+            COMMON SECTIONS (For Text, File, and URL modes)
             ========================================================================= */}
         {sourceMode !== "manual" && (
           <div className="space-y-3.5 pt-1">
-            {/* Finished Examples Starter Button (.ex-entry) - ALWAYS VISIBLE */}
+            {/* Finished Examples Starter Button (.ex-entry) */}
             <button
               type="button"
               id="btn-examples"
               onClick={() => setIsExamplesModalOpen(true)}
-              className="ex-entry flex items-center gap-3 w-full p-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] hover:border-[#365300] dark:hover:border-[#c6f432] hover:bg-[var(--hover)] text-left transition-all cursor-pointer group shadow-xs mb-1"
+              className="ex-entry cursor-pointer"
             >
-              <div className="w-8 h-8 rounded-lg bg-[#c6f432] text-[#141414] grid place-items-center text-sm shrink-0 font-bold">
-                <i className="fas fa-images text-xs" />
-              </div>
-              <div className="flex flex-col min-w-0 flex-1 leading-snug">
-                <b className="text-xs font-extrabold text-[var(--fg)] group-hover:text-[#365300] dark:group-hover:text-[#c6f432] transition-colors">
-                  {language === "ko" ? "완성 예시에서 시작하기" : "Start from a finished example"}
-                </b>
-                <small className="text-[11px] text-[var(--muted)]">
-                  {language === "ko" ? "업종별 25종 · 글자만 바꾸면 끝" : "25 by industry · just swap the words"}
-                </small>
-              </div>
-              <i className="fas fa-chevron-right text-[10px] text-[var(--muted)] group-hover:translate-x-0.5 transition-transform shrink-0" />
+              <i className="fas fa-images" />
+              <span>
+                <b>Start from a finished example</b>
+                <small>25 by industry · just swap the words</small>
+              </span>
+              <i className="fas fa-chevron-right ml-auto" />
             </button>
 
-            {/* Target Platform Selector (#opt-platform) */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[var(--fg)]">Target Social Platform</span>
-                <span className="text-[10px] text-[var(--muted)] font-mono">
-                  {selectedPlatformId === "tiktok" ? "9:16 · Rec. 5~10 slides" : selectedPlatformId === "x" ? "16:9 · Rec. 2~4 slides" : "4:5 · Rec. 6~10 slides"}
+            {/* Target Platform Selector (.platform-chips) */}
+            <div className="lbl" id="opt-platform-wrap">
+              <span className="flex items-center justify-between">
+                <span>Platform</span>
+                <span id="opt-platform-hint" className="text-[10px] text-[var(--muted)] truncate ml-2 font-mono">
+                  {activePlat.ratio} · Rec. {activePlat.rec} slides
                 </span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5" role="radiogroup">
-                {[
-                  { id: "instagram", name: "Instagram", icon: "fa-brands fa-instagram", color: "#E1306C", ratio: "4:5" },
-                  { id: "threads", name: "Threads", icon: "fa-brands fa-threads", color: "#000000", ratio: "4:5" },
-                  { id: "linkedin", name: "LinkedIn", icon: "fa-brands fa-linkedin-in", color: "#0A66C2", ratio: "4:5" },
-                  { id: "tiktok", name: "TikTok", icon: "fa-brands fa-tiktok", color: "#000000", ratio: "9:16" },
-                  { id: "facebook", name: "Facebook", icon: "fa-brands fa-facebook-f", color: "#1877F2", ratio: "1:1" },
-                  { id: "x", name: "X", icon: "fa-brands fa-x-twitter", color: "#000000", ratio: "16:9" },
-                ].map((plat) => {
+              </span>
+              <div id="opt-platform" className="platform-chips mt-1" role="radiogroup">
+                {currentPlatformData.map((plat) => {
                   const isSelected = selectedPlatformId === plat.id;
                   return (
                     <button
                       key={plat.id}
                       type="button"
+                      role="radio"
+                      aria-checked={isSelected}
                       onClick={() => {
                         setSelectedPlatformId(plat.id as any);
                         setAspectRatio(plat.ratio as any);
                         setCaptionPlatform(plat.id);
                       }}
-                      className={cn(
-                        "flex items-center gap-1.5 px-2 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer",
-                        isSelected
-                          ? "border-[#c6f432] bg-[#c6f432]/10 text-[var(--fg)] shadow-xs"
-                          : "border-[var(--line)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--fg)] hover:border-[var(--muted)]"
-                      )}
+                      className={cn("pf-chip cursor-pointer", isSelected && "active")}
+                      style={{ "--pf": plat.color } as any}
                     >
-                      <i className={cn(plat.icon, "text-xs shrink-0")} style={{ color: isSelected ? undefined : plat.color }} />
-                      <span className="truncate text-[11px] font-bold">{plat.name}</span>
+                      <i className={plat.icon} />
+                      <span>{plat.name}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Advanced Options Accordion */}
-            <div className="border border-[var(--line)] rounded-xl bg-[var(--bg)] overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setIsAdvOptsOpen(!isAdvOptsOpen)}
-                className="w-full px-3 py-2 flex items-center justify-between text-xs font-bold text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
-              >
-                <span className="flex items-center gap-1.5">
-                  <i className="fas fa-sliders text-[11px] text-[var(--muted)]" />
-                  <span>Advanced Options (Tone, Slide Count, Goal)</span>
+            {/* Advanced Options Accordion (.adv-toggle & #adv-opts) */}
+            <button
+              type="button"
+              id="btn-adv-opts"
+              onClick={() => setIsAdvOptsOpen(!isAdvOptsOpen)}
+              className="adv-toggle !flex cursor-pointer"
+              aria-expanded={isAdvOptsOpen}
+              aria-controls="adv-opts"
+            >
+              <i className="fas fa-sliders" />
+              <span>More options</span>
+              <small>slides · goal · tone · audience · language · length</small>
+              <i className="fas fa-chevron-down ml-auto adv-chev" />
+            </button>
+
+            <div id="adv-opts" className={cn("adv-opts space-y-4", isAdvOptsOpen && "open")}>
+              <label className="lbl" id="focus-wrap">
+                <span>Focus / Angle (Optional)</span>
+                <input
+                  id="opt-focus"
+                  className="field"
+                  placeholder="e.g. Emphasize pricing & launch date, customer benefits"
+                  value={focusAngle}
+                  onChange={(e) => setFocusAngle(e.target.value)}
+                />
+              </label>
+
+              <div className="grid grid-cols-2 gap-2">
+                <label className="lbl">
+                  <span>Slides</span>
+                  <select
+                    id="opt-count"
+                    className="field"
+                    value={slideCountOpt}
+                    onChange={(e) => setSlideCountOpt(e.target.value)}
+                  >
+                    <option value="auto">Auto (fits length)</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="10">10</option>
+                    <option value="12">12</option>
+                  </select>
+                </label>
+
+                <label className="lbl">
+                  <span>Goal</span>
+                  <select
+                    id="opt-goal"
+                    className="field"
+                    value={goalOpt}
+                    onChange={(e) => setGoalOpt(e.target.value)}
+                  >
+                    <option value="Informative Breakdown">Educate</option>
+                    <option value="Brand Awareness">Brand awareness</option>
+                    <option value="Lead Conversion">Conversion</option>
+                    <option value="Storytelling">Storytelling</option>
+                    <option value="Product Promotion">Promote product</option>
+                  </select>
+                </label>
+
+                <label className="lbl">
+                  <span>Tone</span>
+                  <select
+                    id="opt-tone"
+                    className="field"
+                    value={toneOpt}
+                    onChange={(e) => setToneOpt(e.target.value)}
+                  >
+                    <option value="Friendly & Clear">Friendly & clear</option>
+                    <option value="Professional & Authoritative">Professional</option>
+                    <option value="Witty & Humorous">Witty</option>
+                    <option value="Emotional & Warm">Warm & emotional</option>
+                    <option value="Bold & Provocative">Bold</option>
+                  </select>
+                </label>
+
+                <label className="lbl">
+                  <span>Target</span>
+                  <input
+                    id="opt-audience"
+                    className="field"
+                    placeholder="e.g. 20-30s professionals"
+                    value={targetAudience}
+                    onChange={(e) => setTargetAudience(e.target.value)}
+                  />
+                </label>
+
+                <label className="lbl">
+                  <span>Language</span>
+                  <select
+                    id="opt-language"
+                    className="field"
+                    value={contentLanguage}
+                    onChange={(e) => setContentLanguage(e.target.value as any)}
+                  >
+                    <option value="en">English</option>
+                    <option value="ko">한국어</option>
+                    <option value="ja">日本語</option>
+                    <option value="es">Español</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="lbl" id="opt-density-wrap">
+                <span className="flex items-center justify-between">
+                  <span>Text density</span>
+                  <span className="text-[10px] text-[var(--muted)]" id="opt-density-hint">
+                    {textDensity === "short"
+                      ? "One sentence per card, essentials only"
+                      : textDensity === "detailed"
+                      ? "Explanatory, with evidence & examples"
+                      : "Standard length for the template"}
+                  </span>
                 </span>
-                <i className={cn("fas text-[10px] text-[var(--muted)] transition-transform", isAdvOptsOpen ? "fa-chevron-up" : "fa-chevron-down")} />
-              </button>
-
-              {isAdvOptsOpen && (
-                <div className="p-3 pt-1 space-y-3 border-t border-[var(--line)]">
-                  <label className="lbl">
-                    <span>Focus / Angle (Optional)</span>
-                    <input
-                      type="text"
-                      value={focusAngle}
-                      onChange={(e) => setFocusAngle(e.target.value)}
-                      placeholder="e.g. Emphasize pricing & launch date, strong 3s hook"
-                      className="field text-xs"
-                    />
-                  </label>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="lbl">
-                      <span>Slide Count</span>
-                      <select
-                        value={slideCountOpt}
-                        onChange={(e) => setSlideCountOpt(e.target.value)}
-                        className="field text-xs font-medium"
-                      >
-                        <option value="auto">Auto (Fits content)</option>
-                        <option value="4">4 slides</option>
-                        <option value="5">5 slides</option>
-                        <option value="6">6 slides (Recommended)</option>
-                        <option value="7">7 slides</option>
-                        <option value="8">8 slides</option>
-                        <option value="10">10 slides</option>
-                      </select>
-                    </label>
-
-                    <label className="lbl">
-                      <span>Content Language</span>
-                      <select
-                        value={contentLanguage}
-                        onChange={(e) => setContentLanguage(e.target.value as any)}
-                        className="field text-xs font-medium"
-                      >
-                        <option value="en">English</option>
-                        <option value="ko">한국어 (Korean)</option>
-                        <option value="ja">日本語 (Japanese)</option>
-                        <option value="es">Español (Spanish)</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="lbl">
-                      <span>Goal</span>
-                      <select
-                        value={goalOpt}
-                        onChange={(e) => setGoalOpt(e.target.value)}
-                        className="field text-xs font-medium"
-                      >
-                        <option value="Informative Breakdown">Informative Breakdown</option>
-                        <option value="Actionable Tips & Hacks">Actionable Tips & Hacks</option>
-                        <option value="Storytelling & Relatable">Storytelling & Relatable</option>
-                        <option value="Viral & Engagement">Viral & Engagement</option>
-                      </select>
-                    </label>
-
-                    <label className="lbl">
-                      <span>Tone</span>
-                      <select
-                        value={toneOpt}
-                        onChange={(e) => setToneOpt(e.target.value)}
-                        className="field text-xs font-medium"
-                      >
-                        <option value="Clear & Engaging">Clear & Engaging</option>
-                        <option value="Professional & Authoritative">Professional & Authoritative</option>
-                        <option value="Bold & Confident">Bold & Confident</option>
-                        <option value="Witty & Humorous">Witty & Humorous</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="lbl">
-                      <span>Text Density</span>
-                      <select
-                        value={textDensity}
-                        onChange={(e) => setTextDensity(e.target.value as any)}
-                        className="field text-xs font-medium"
-                      >
-                        <option value="short">Concise (Bite-sized)</option>
-                        <option value="normal">Balanced (Recommended)</option>
-                        <option value="detailed">Detailed (Deep dive)</option>
-                      </select>
-                    </label>
-
-                    <label className="lbl">
-                      <span>Story Framework</span>
-                      <select
-                        value={storyStructure}
-                        onChange={(e) => setStoryStructure(e.target.value)}
-                        className="field text-xs font-medium"
-                      >
-                        <option value="auto">Auto Optimize</option>
-                        <option value="hook-problem-solution">Hook - Problem - Solution</option>
-                        <option value="listicle">Listicle / Checklist</option>
-                        <option value="before-after">Before & After</option>
-                      </select>
-                    </label>
-                  </div>
+                <div className="seg mt-1" id="opt-density">
+                  <button
+                    type="button"
+                    data-v="short"
+                    onClick={() => setTextDensity("short")}
+                    className={cn(textDensity === "short" && "active")}
+                  >
+                    Short
+                  </button>
+                  <button
+                    type="button"
+                    data-v="normal"
+                    onClick={() => setTextDensity("normal")}
+                    className={cn(textDensity === "normal" && "active")}
+                  >
+                    Normal
+                  </button>
+                  <button
+                    type="button"
+                    data-v="detailed"
+                    onClick={() => setTextDensity("detailed")}
+                    className={cn(textDensity === "detailed" && "active")}
+                  >
+                    Detailed
+                  </button>
                 </div>
-              )}
+              </div>
+
+              <label className="lbl">
+                <span>Story structure</span>
+                <select
+                  id="opt-frame"
+                  className="field"
+                  value={storyStructure}
+                  onChange={(e) => setStoryStructure(e.target.value)}
+                >
+                  <option value="auto">Auto (fits your goal)</option>
+                  <option value="pas">Problem → Solution (PAS)</option>
+                  <option value="bab">Before → After (BAB)</option>
+                  <option value="arc">Story (3 acts)</option>
+                  <option value="scene">Relatable scene</option>
+                </select>
+              </label>
             </div>
 
             {/* AI Generation Action Button (#btn-generate) */}
@@ -2168,19 +2074,10 @@ export function SwiperaStudioWorkspace({
               type="button"
               disabled={isGenerating || !rawContent.trim()}
               onClick={handleGenerateCarousel}
-              className="w-full mt-2 h-11 rounded-xl bg-[#c6f432] hover:brightness-95 text-[#141414] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+              className="w-full mt-2 h-11 rounded-xl bg-[var(--brand)] text-[var(--ink)] font-semibold shadow-md hover:shadow-lg hover:brightness-105 active:scale-[.99] transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              {isGenerating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-[#141414] border-t-transparent rounded-full animate-spin" />
-                  <span>{genStageText}</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-black" />
-                  <span>Generate with AI</span>
-                </>
-              )}
+              <i className={cn("fas", isGenerating ? "fa-circle-notch fa-spin" : "fa-forward")} />
+              <span>{isGenerating ? genStageText : "Make cards"}</span>
             </button>
           </div>
         )}
@@ -2196,312 +2093,56 @@ export function SwiperaStudioWorkspace({
         {/* =========================================================================
             1. TOPBAR (#topbar, 56px / h-14)
             ========================================================================= */}
-        <header
-          id="topbar"
-          className="h-14 flex-shrink-0 bg-[var(--panel)] border-b border-[var(--line)] px-3.5 flex items-center justify-between z-30 select-none"
-          data-purpose="studio-topbar"
-        >
-          {/* Left Region: Logo, Brand, Breadcrumb, Inline Title, Cloud Status */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Link
-              href="/"
-              className="flex items-center gap-2 group flex-shrink-0"
-              title="Return to Swipera Home"
-            >
-              {/* Swipera Lime S Mark */}
-              <div className="w-8 h-8 rounded-[10px] bg-[#c6f432] text-[#141414] font-black text-lg flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                S
-              </div>
-              <span className="font-extrabold text-sm tracking-tight hidden sm:inline text-[var(--fg)]">
-                Swipera
-              </span>
-            </Link>
+        {/* =========================================================================
+            1. PIXEL-PERFECT TOP HEADER (Brand Workspace Tabs + Status + Controls)
+            ========================================================================= */}
+        <TopHeader
+          currentProjectTitle={projectTitle}
+          onProjectTitleChange={(newTitle) => {
+            setProjectTitle(newTitle);
+            setIsSaved(false);
+            setSaveTime("Editing...");
+          }}
+          saveStatus={isSaved ? "saved" : "saving"}
+          isEditorActive={activeTab !== "calendar" && activeTab !== "pipeline" && activeTab !== "ideas"}
+          canUndo={historyIndex > 0}
+          canRedo={historyIndex < history.length - 1}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          onSaveAndPost={() => {
+            if (externalOnOpenComposer) {
+              externalOnOpenComposer({ title: projectTitle, slides });
+            } else {
+              setComposerPost({ title: projectTitle, slides });
+              setIsComposerOpen(true);
+            }
+          }}
+          onSendToSchedule={handleSendToSchedule}
+          onProfileClick={() => {
+            setAuthModalMode("signin");
+            setIsAuthModalOpen(true);
+          }}
+        />
 
-            <span className="text-[var(--muted)] font-mono text-xs hidden sm:inline">/</span>
-
-            {/* Inline Project Title Input */}
-            <input
-              id="project-title"
-              type="text"
-              value={projectTitle}
-              onChange={(e) => {
-                setProjectTitle(e.target.value);
-                setIsSaved(false);
-                setSaveTime("Editing...");
-              }}
-              onBlur={() => {
-                setIsSaved(true);
-                setSaveTime("Saved");
-              }}
-              className="text-xs font-semibold bg-transparent hover:bg-[var(--hover)] focus:bg-[var(--hover)] rounded-md px-2 py-1 outline-none text-[var(--fg)] max-w-[130px] sm:max-w-[180px] truncate transition-colors"
-              title="Click to rename project"
-            />
-
-            {/* Cloud Auto-Save Status */}
-            <div
-              id="save-indicator"
-              className="hidden md:flex items-center gap-1.5 text-xs text-[var(--muted)] pl-1"
-              title="All changes saved to your browser"
-            >
-              <i className="fas fa-cloud-check text-[#365300] dark:text-[#c6f432]" />
-              <span>{saveTime}</span>
-            </div>
-          </div>
-
-          {/* Right Region: Utility Suite */}
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            {/* Undo Button */}
-            <button
-              id="btn-undo"
-              type="button"
-              disabled={historyIndex <= 0}
-              onClick={handleUndo}
-              className="tb-btn hidden md:inline-flex"
-              title="Undo (Ctrl+Z)"
-            >
-              <i className="fas fa-rotate-left" />
-            </button>
-
-            {/* Redo Button */}
-            <button
-              id="btn-redo"
-              type="button"
-              disabled={historyIndex >= history.length - 1}
-              onClick={handleRedo}
-              className="tb-btn hidden md:inline-flex"
-              title="Redo (Ctrl+Y)"
-            >
-              <i className="fas fa-rotate-right" />
-            </button>
-
-            <span className="w-px h-5 bg-[var(--line)] mx-1 hidden sm:block" />
-
-            {/* Projects Folder Modal Button */}
-            <button
-              id="btn-projects"
-              type="button"
-              onClick={() => setIsProjectsModalOpen(true)}
-              className="tb-btn hidden sm:inline-flex"
-              title="My Projects"
-            >
-              <i className="fas fa-folder-open" />
-            </button>
-
-            {/* Keyboard Shortcuts Button */}
-            <button
-              id="btn-shortcuts"
-              type="button"
-              onClick={() => setIsShortcutsModalOpen(true)}
-              className="tb-btn hidden lg:inline-flex"
-              title="Keyboard Shortcuts"
-            >
-              <i className="fas fa-keyboard" />
-            </button>
-
-            {/* Help / Tour Button */}
-            <button
-              id="btn-tour"
-              type="button"
-              onClick={() =>
-                toast.info("Swipera Studio Tour", {
-                  description: "Use Create to input notes or URLs, Styles for 28 templates, Design for typography, and Brand for handles & videos!",
-                })
-              }
-              className="tb-btn hidden lg:inline-flex"
-              title="Help Tour"
-            >
-              <i className="fas fa-circle-question" />
-            </button>
-
-            {/* Theme Switcher Toggle */}
-            <button
-              id="btn-theme"
-              type="button"
-              onClick={toggleTheme}
-              className="tb-btn"
-              title={isDarkTheme ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
-              <i className={cn("fas", isDarkTheme ? "fa-sun text-amber-400" : "fa-moon")} />
-            </button>
-
-            {/* Language Switcher Button */}
-            <button
-              id="btn-lang"
-              type="button"
-              onClick={toggleLanguage}
-              className="tb-btn font-mono text-xs font-bold w-auto px-2"
-              title="Toggle EN / KO"
-            >
-              {language.toUpperCase()}
-            </button>
-
-            <span className="w-px h-5 bg-[var(--line)] mx-1 hidden sm:block" />
-
-            {/* Lime Beta Pill Badge */}
-            <span
-              id="acct-badge"
-              className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#c6f432] text-[#141414] shadow-xs cursor-default hidden sm:inline"
-            >
-              BETA
-            </span>
-
-            {/* Save & Post Primary Export Button */}
-            <button
-              id="btn-export"
-              type="button"
-              onClick={() => {
-                if (externalOnOpenComposer) {
-                  externalOnOpenComposer({ title: projectTitle, slides });
-                } else {
-                  setComposerPost({ title: projectTitle, slides });
-                  setIsComposerOpen(true);
-                }
-              }}
-              className="ml-1 bg-[#141414] hover:bg-black text-white dark:bg-white dark:hover:bg-slate-100 dark:text-[#141414] px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-            >
-              <i className="fas fa-download text-xs" />
-              <span>Save & post</span>
-            </button>
-
-            {/* Send to Schedule Button */}
-            <button
-              type="button"
-              onClick={handleSendToSchedule}
-              className="ml-1 bg-[#c6f432] hover:bg-[#d6ff52] text-[#141414] px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-              title="Schedule this deck to your Content Calendar"
-            >
-              <i className="fas fa-calendar-alt text-xs" />
-              <span>Send to schedule</span>
-            </button>
-          </div>
-        </header>
-
-        {/* Style Memory / Autonomous Flywheel Smart Alert Banner */}
-        <DailyFlywheelAlertBanner onOpenFlywheelModal={() => setIsFlywheelModalOpen(true)} />
+        {/* Style Memory Alert Banner only shown on studio tabs, NOT calendar or pipeline */}
+        {activeTab !== "calendar" && activeTab !== "pipeline" && (
+          <DailyFlywheelAlertBanner onOpenFlywheelModal={() => setIsFlywheelModalOpen(true)} />
+        )}
 
         {/* =========================================================================
             2. MAIN BODY: RAIL (64px) + LEFT PANEL (340px) + CENTER CANVAS + INSPECTOR (300px)
             ========================================================================= */}
         <div className="flex-1 flex min-h-0 overflow-hidden relative">
-          {/* =====================================================================
-              2.1 LEFT RAIL (#rail, width 64px)
-              Exact Order: 1. Idea -> 2. Image -> 3. Design -> 4. Create -> 5. Video -> 6. Calendar
-              ===================================================================== */}
-          <nav
-            id="rail"
-            className="w-16 shrink-0 border-r border-[var(--line)] bg-[var(--panel)] flex flex-col items-center py-3 gap-1 select-none z-20"
-            data-purpose="studio-rail-navigation"
-          >
-            {/* 1. Pipeline */}
-            <button
-              type="button"
-              data-tab="pipeline"
-              onClick={() => handleNavSelect("pipeline")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "pipeline" && "active"
-              )}
-              title="Social Media Automation Engine Pipeline"
-            >
-              <i className="fas fa-bolt" />
-              <span>Pipeline</span>
-            </button>
-
-            {/* 2. Idea */}
-            <button
-              type="button"
-              data-tab="ideas"
-              onClick={() => handleNavSelect("ideas")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "ideas" && "active"
-              )}
-              title="Find viral trends & content angles"
-            >
-              <i className="fas fa-lightbulb" />
-              <span>Idea</span>
-            </button>
-
-            {/* 3. Create */}
-            <button
-              type="button"
-              data-tab="create"
-              onClick={() => handleNavSelect("create")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "create" && "active"
-              )}
-              title="Input content & generate slides with AI"
-            >
-              <i className="fas fa-wand-magic-sparkles" />
-              <span>Create</span>
-            </button>
-
-            {/* 4. Styles / Templates */}
-            <button
-              type="button"
-              data-tab="templates"
-              onClick={() => handleNavSelect("templates")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "templates" && "active"
-              )}
-              title="Browse 28 style templates"
-            >
-              <i className="fas fa-palette" />
-              <span>Styles</span>
-            </button>
-
-            {/* 5. Caption */}
-            <button
-              type="button"
-              data-tab="caption"
-              onClick={() => handleNavSelect("caption")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "caption" && "active"
-              )}
-              title="AI social captions & hashtags"
-            >
-              <i className="fas fa-comment-dots" />
-              <span>Caption</span>
-            </button>
-
-            {/* Divider */}
-            <div className="w-8 h-px bg-[var(--line)] my-1.5 shrink-0" />
-
-            {/* 6. Calendar (Last) */}
-            <button
-              type="button"
-              data-tab="calendar"
-              onClick={() => handleNavSelect("calendar")}
-              className={cn(
-                "rail-btn cursor-pointer transition-all",
-                activeTab === "calendar" && "active"
-              )}
-              title="Content publishing calendar & scheduler"
-            >
-              <i className="fas fa-calendar-days" />
-              <span>Calendar</span>
-            </button>
-
-            <div className="flex-1" />
-
-            {/* Bottom Account Indicator in Rail */}
-            <div className="flex flex-col items-center gap-2 pt-2 border-t border-[var(--line)]">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthModalMode("signin");
-                  setIsAuthModalOpen(true);
-                }}
-                className="w-8 h-8 rounded-full bg-[var(--hover)] hover:bg-[var(--line)] flex items-center justify-center text-xs font-bold text-[var(--fg)] cursor-pointer transition-colors"
-                title={session?.user?.name || "Account Profile"}
-              >
-                {session?.user?.name ? session.user.name[0].toUpperCase() : "U"}
-              </button>
-            </div>
-          </nav>
+          {/* Shared navigation for the full publishing workspace */}
+          <Sidebar
+            activeTab={activeTab}
+            onTabChange={(tab) => handleNavSelect(tab)}
+            profileName={session?.user?.name || "Account profile"}
+            onProfileClick={() => {
+              setAuthModalMode("signin");
+              setIsAuthModalOpen(true);
+            }}
+          />
 
           {/* =========================================================================
               2.2 WORKSPACE CONTENT - Zero-Flicker Multi-View Preservation
@@ -2546,13 +2187,23 @@ export function SwiperaStudioWorkspace({
             />
           </div>
 
-          {/* 2. CALENDAR WORKSPACE */}
+          {/* 2. CALENDAR WORKSPACE (With Signal Array Sidebar matching reference) */}
           <div
             className={cn(
-              "flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[var(--bg)]",
+              "flex-1 flex min-w-0 h-full overflow-hidden bg-[var(--bg)]",
               activeTab === "calendar" ? "flex" : "hidden"
             )}
           >
+            <div className="hidden md:flex shrink-0 h-full">
+              <SignalArraySidebar
+                onOpenFlywheelModal={() => setIsFlywheelModalOpen(true)}
+                onAddChannel={() => {
+                  toast.info("Manage Social Channels", {
+                    description: "Connect or re-authenticate X, LinkedIn, Threads, Instagram accounts",
+                  });
+                }}
+              />
+            </div>
             <CalendarView
               onOpenComposer={
                 externalOnOpenComposer ||
@@ -3617,44 +3268,69 @@ export function SwiperaStudioWorkspace({
                   <button
                     type="button"
                     onClick={() => setIsPolishMenuOpen(!isPolishMenuOpen)}
-                    className="tb-btn w-auto px-2 gap-1.5 text-xs font-bold text-[var(--fg)] cursor-pointer"
+                    className="tb-btn !w-auto px-2.5 gap-1.5 text-xs font-semibold text-[var(--fg)] cursor-pointer"
                     title="AI Polish"
                   >
-                    <i className="fas fa-bolt text-[#365300] dark:text-[#c6f432]" />
+                    <i className="fas fa-bolt text-[var(--brand-ink)]" />
                     <span>Polish</span>
                     <i className="fas fa-caret-down text-[10px]" />
                   </button>
 
                   {/* Polish Dropdown Menu */}
                   {isPolishMenuOpen && (
-                    <div className="absolute top-full left-0 mt-1.5 w-52 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="absolute top-full left-0 mt-1.5 w-60 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100">
                       <button
                         type="button"
                         onClick={() => handleAIRewrite("shorter")}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
                       >
                         Shorter & punchier
                       </button>
                       <button
                         type="button"
                         onClick={() => handleAIRewrite("numbers")}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
                       >
-                        Add specific numbers
+                        Add specific numbers / stats
                       </button>
                       <button
                         type="button"
                         onClick={() => handleAIRewrite("hook")}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
                       >
                         Hook question headline
                       </button>
                       <button
                         type="button"
                         onClick={() => handleAIRewrite("emotional")}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
                       >
                         More emotional tone
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAIRewrite("professional")}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
+                      >
+                        More professional & authoritative
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAIRewrite("english")}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
+                      >
+                        Translate to English
+                      </button>
+                      <div className="w-full h-px bg-[var(--line)] my-1" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPolishMenuOpen(false);
+                          setIsCustomPromptModalOpen(true);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer"
+                      >
+                        Custom prompt instruction…
                       </button>
                     </div>
                   )}
@@ -3662,9 +3338,9 @@ export function SwiperaStudioWorkspace({
 
                 <button
                   type="button"
-                  onClick={() => toast.info("Add image sticker")}
-                  className="tb-btn"
-                  title="Image"
+                  onClick={() => slideImageInputRef.current?.click()}
+                  className="tb-btn cursor-pointer"
+                  title="Upload or change image for this slide"
                 >
                   <i className="fas fa-image" />
                 </button>
@@ -3820,18 +3496,18 @@ export function SwiperaStudioWorkspace({
 
                   <button
                     type="button"
-                    onClick={() => handleAIRewrite("numbers")}
+                    onClick={() => handleAIRewrite("fit")}
                     className="ctx-btn"
-                    title="Length fit (AI)"
+                    title="Fit length (AI)"
                   >
                     <i className="fas fa-text-height" />
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => handleAIRewrite("emotional")}
+                    onClick={() => handleAIRewrite("longer")}
                     className="ctx-btn"
-                    title="Expand (AI)"
+                    title="Longer (AI)"
                   >
                     <i className="fas fa-expand" />
                   </button>
@@ -3924,13 +3600,15 @@ export function SwiperaStudioWorkspace({
                       slideIndex={currentSlideIndex}
                       totalSlides={slides.length}
                       aspectRatio={aspectRatio}
-                      templateId={selectedTemplateId || "hero"}
+                      templateId={selectedTemplateId || "brutalism"}
                       activeScheme={activeScheme}
+                      selectedSchemeIndex={selectedSchemeIndex}
+                      customAccent={accentColorOverride}
                       titleFont={titleFont}
                       bodyFont={bodyFont}
-                      brand={brandHandle || "@theabreed"}
-                      site={brandWebsite || (extractedSource?.domain ? extractedSource.domain.replace(/^www\./, "") : extractedSource?.siteName || "TechCrunch")}
-                      swipeText={language === "ko" ? "다음 →" : "Swipe →"}
+                      brand={brandHandle || "@swipera"}
+                      site={brandWebsite || (extractedSource?.domain ? extractedSource.domain.replace(/^www\./, "").toUpperCase() : extractedSource?.siteName || "SWIPERA")}
+                      swipeText={language === "ko" ? "다음 →" : "SWIPE →"}
                       textAlign={textAlign}
                       titleWeight={titleWeight}
                       titleCase={titleCase}

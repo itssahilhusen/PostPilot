@@ -30,7 +30,8 @@ import {
   Video,
   Clock,
   FileText,
-  Images as ImagesIcon
+  Images as ImagesIcon,
+  Globe
 } from "lucide-react";
 
 export type SidebarTabId =
@@ -38,6 +39,7 @@ export type SidebarTabId =
   | "auto-dm"
   | "studio"
   | "ideas"
+  | "news-sources"
   | "carousel"
   | "videos"
   | "schedule"
@@ -83,6 +85,7 @@ export function RaycallDashboard() {
     if (!pathname) return;
     if (pathname.includes("/pipelines")) setActiveTab("pipelines");
     else if (pathname.includes("/auto-dm") || pathname.includes("/engagement-automation")) setActiveTab("auto-dm");
+    else if (pathname.includes("/news-sources")) setActiveTab("news-sources");
     else if (pathname.includes("/ideas")) setActiveTab("ideas");
     else if (pathname.includes("/images") || pathname.includes("/images")) setActiveTab("carousel");
     else if (pathname.includes("/videos")) setActiveTab("videos");
@@ -144,6 +147,14 @@ export function RaycallDashboard() {
           label: "Ideas",
           icon: Rss,
           href: "/ideas",
+        },
+        {
+          id: "news-sources",
+          label: "News Sources",
+          icon: Globe,
+          badge: "100",
+          badgeType: "new",
+          href: "/news-sources",
         },
         {
           id: "carousel",

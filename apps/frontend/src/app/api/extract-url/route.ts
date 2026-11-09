@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 interface ExtractedImage {
   url: string;
   alt?: string;
@@ -105,14 +107,187 @@ function resolveUrl(relativeOrAbsolute: string, baseUrl: string): string | null 
   }
 }
 
+// Smart image resolution upgrader to ensure high-definition master assets
+function upgradeImageUrl(url: string): string {
+  if (!url) return url;
+  let res = url.trim();
+
+  // Wikipedia / Wikimedia: Strip /thumb/ and trailing /###px-... to get the 4K+ original master
+  if (res.includes("wikimedia.org") && res.includes("/thumb/")) {
+    try {
+      const u = new URL(res);
+      u.host = "upload.wikimedia.org";
+      u.pathname = u.pathname.replace(/\/thumb\/(.+)\/[^/]+$/, "/$1");
+      u.search = "";
+      res = u.toString();
+    } catch {
+      res = res.replace(/\/thumb\/(.+)\/[^/?#]+(\?.*)?$/, "/$1");
+    }
+  }
+
+  // Medium CDN: Upgrade downscaled resize to 1600px
+  res = res.replace(/\/resize:fit:\d+\//i, "/resize:fit:1600/");
+  res = res.replace(/\/max\/\d+\//i, "/max/1600/");
+
+  // Substack CDN: Upgrade downscaled width to 1600px
+  res = res.replace(/\/w_\d+,/i, "/w_1600,");
+  res = res.replace(/\/resize\/\d+x\//i, "/resize/1600x/");
+
+  // Shopify: Upgrade small/medium/compact image crops to full _master
+  res = res.replace(
+    /_(?:pico|icon|thumb|small|compact|medium|large|grande|\d+x\d+)(\.[a-zA-Z0-9]+)(\?.*)?$/i,
+    "_master$1$2"
+  );
+
+  // WordPress thumbnail crops e.g. -300x200.jpg -> .jpg
+  const wpMatch = res.match(/^(.*)-(\d+)x(\d+)(\.[a-zA-Z0-9]+)(\?.*)?$/i);
+  if (wpMatch) {
+    const w = parseInt(wpMatch[2], 10);
+    const h = parseInt(wpMatch[3], 10);
+    if (w < 1200 || h < 1200) {
+      res = wpMatch[1] + wpMatch[4] + (wpMatch[5] || "");
+    }
+  }
+
+  // Strip or upgrade CDN downscaling query parameters (Unsplash, Cloudinary, Imgix, etc.)
+  try {
+    const u = new URL(res);
+    const wParam = u.searchParams.get("w") || u.searchParams.get("width");
+    if (wParam && parseInt(wParam, 10) < 800) {
+      if (u.searchParams.has("w")) u.searchParams.set("w", "1600");
+      if (u.searchParams.has("width")) u.searchParams.set("width", "1600");
+      u.searchParams.delete("h");
+      u.searchParams.delete("height");
+      u.searchParams.delete("fit");
+      u.searchParams.delete("resize");
+      res = u.toString();
+    }
+  } catch {}
+
+  return res;
+}
+
+// Extract the best, highest-resolution image from an HTML img tag, discarding avatars/icons/thumbnails
+function extractImageCandidate(tag: string, baseUrl: string): { url: string; alt: string } | null {
+  // 1. Tag-level dimensions check
+  const widthMatch = tag.match(/\bwidth=["']?(\d+)/i);
+  const heightMatch = tag.match(/\bheight=["']?(\d+)/i);
+  if (widthMatch) {
+    const w = parseInt(widthMatch[1], 10);
+    if (w < 250) return null; // Discard tiny icons, avatars, badges (<250px)
+  }
+  if (heightMatch) {
+    const h = parseInt(heightMatch[1], 10);
+    if (h < 180) return null; // Discard tiny thumbnails, banners (<180px)
+  }
+
+  // 2. Class, id, and alt keyword blacklist
+  const classMatch = tag.match(/\bclass=["']([^"']*)["']/i);
+  const idMatch = tag.match(/\bid=["']([^"']*)["']/i);
+  const altMatch = tag.match(/\balt=["']([^"']*)["']/i);
+  const tagAttrs = `${classMatch ? classMatch[1] : ""} ${idMatch ? idMatch[1] : ""} ${altMatch ? altMatch[1] : ""}`.toLowerCase();
+
+  const junkKeywords = [
+    "avatar", "author", "profile", "bio", "headshot", "byline", "gravatar",
+    "user-pic", "user_pic", "writer", "contributor", "logo", "badge", "sponsor",
+    "icon", "button", "emoji", "spinner", "advert", "tracking", "pixel", "share",
+    "social", "reaction", "comment"
+  ];
+  if (junkKeywords.some((k) => tagAttrs.includes(k))) {
+    return null;
+  }
+
+  const cleanAlt = altMatch ? decodeHtmlEntities(altMatch[1].trim()) : "";
+
+  // 3. Inspect high-resolution custom attributes first
+  const highResAttrs = [
+    "data-orig-file",
+    "data-large-file",
+    "data-full-url",
+    "data-zoom-src",
+    "data-highres",
+    "data-original",
+    "data-full-src",
+    "data-src-large",
+    "data-url-large",
+  ];
+  for (const attr of highResAttrs) {
+    const regex = new RegExp(`\\b${attr}=["']([^"']+)["']`, "i");
+    const m = tag.match(regex);
+    if (m && m[1] && !m[1].startsWith("data:")) {
+      const resolved = resolveUrl(m[1].trim(), baseUrl);
+      if (resolved) {
+        return { url: upgradeImageUrl(resolved), alt: cleanAlt };
+      }
+    }
+  }
+
+  // 4. Parse srcset / data-srcset to select candidate with highest resolution width
+  const srcsetMatch = tag.match(/\b(?:srcset|data-srcset)=["']([^"']+)["']/i);
+  if (srcsetMatch && srcsetMatch[1]) {
+    const candidates = srcsetMatch[1]
+      .split(",")
+      .map((entry) => {
+        const parts = entry.trim().split(/\s+/);
+        const url = parts[0];
+        let width = 0;
+        if (parts[1]) {
+          const wMatch = parts[1].match(/^(\d+)w$/i);
+          if (wMatch) width = parseInt(wMatch[1], 10);
+          const xMatch = parts[1].match(/^(\d+(?:\.\d+)?)x$/i);
+          if (xMatch) width = Math.round(parseFloat(xMatch[1]) * 800);
+        }
+        return { url, width };
+      })
+      .filter((c) => c.url && !c.url.startsWith("data:"));
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.width - a.width);
+      if (candidates[0].width >= 500 || candidates[0].width === 0) {
+        const resolved = resolveUrl(candidates[0].url, baseUrl);
+        if (resolved) {
+          return { url: upgradeImageUrl(resolved), alt: cleanAlt };
+        }
+      }
+    }
+  }
+
+  // 5. Fallback to standard src / data-src
+  const srcMatch = tag.match(/\b(?:src|data-src|data-lazy-src)=["']([^"']+)["']/i);
+  if (srcMatch && srcMatch[1] && !srcMatch[1].startsWith("data:")) {
+    const rawSrc = srcMatch[1].trim();
+    if (junkKeywords.some((k) => rawSrc.toLowerCase().includes(k))) {
+      return null;
+    }
+    const resolved = resolveUrl(rawSrc, baseUrl);
+    if (resolved) {
+      return { url: upgradeImageUrl(resolved), alt: cleanAlt };
+    }
+  }
+
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const rawUrl = (body.url || "").trim();
+    let rawUrl = (body.url || "").trim();
 
-    if (!rawUrl || !/^https?:\/\/\S+/i.test(rawUrl)) {
+    if (!rawUrl) {
       return NextResponse.json(
-        { error: "Please enter a valid URL starting with http:// or https://" },
+        { error: "Please enter a web URL." },
+        { status: 400 }
+      );
+    }
+
+    // Auto prepend https:// if missing
+    if (!/^https?:\/\//i.test(rawUrl)) {
+      rawUrl = "https://" + rawUrl;
+    }
+
+    if (!/^https?:\/\/\S+/i.test(rawUrl)) {
+      return NextResponse.json(
+        { error: "Please enter a valid URL." },
         { status: 400 }
       );
     }
@@ -132,75 +307,151 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
     }
 
-    // High-performance Fetch with Real Browser Headers and 5s Timeout
+    // High-performance Fetch with Real Browser Headers and 6s Timeout
     let finalUrl = parsedUrl.href;
     let contentType = "";
     let html = "";
+    let fallbackResult: ExtractionResult | null = null;
 
     try {
       const response = await fetch(finalUrl, {
         headers: {
           "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9,ko;q=0.8",
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-          "Upgrade-Insecure-Requests": "1",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Cache-Control": "max-age=0",
         },
         redirect: "follow",
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(6000),
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch web page (Status ${response.status})`);
+      if (response.ok) {
+        finalUrl = response.url || finalUrl;
+        contentType = response.headers.get("content-type") || "";
+
+        // Direct PDF Handling
+        if (
+          contentType.includes("application/pdf") ||
+          finalUrl.toLowerCase().endsWith(".pdf")
+        ) {
+          const buffer = await response.arrayBuffer();
+          const base64Data = Buffer.from(buffer).toString("base64");
+          const fileName = finalUrl.split("/").pop() || "Document.pdf";
+          const pdfResult: ExtractionResult = {
+            kind: "pdf",
+            url: finalUrl,
+            siteName: extractSiteName(finalUrl),
+            title: decodeURIComponent(fileName),
+            published: null,
+            description: "PDF Document extracted directly.",
+            text: "",
+            words: 0,
+            image: null,
+            images: [],
+            via: "reader",
+            base64: base64Data,
+          };
+          return NextResponse.json(pdfResult);
+        }
+
+        html = await response.text();
       }
-
-      finalUrl = response.url || finalUrl;
-      contentType = response.headers.get("content-type") || "";
-
-      // Direct PDF Handling
-      if (
-        contentType.includes("application/pdf") ||
-        finalUrl.toLowerCase().endsWith(".pdf")
-      ) {
-        const buffer = await response.arrayBuffer();
-        const base64Data = Buffer.from(buffer).toString("base64");
-        const fileName = finalUrl.split("/").pop() || "Document.pdf";
-        const pdfResult: ExtractionResult = {
-          kind: "pdf",
-          url: finalUrl,
-          siteName: extractSiteName(finalUrl),
-          title: decodeURIComponent(fileName),
-          published: null,
-          description: "PDF Document extracted directly.",
-          text: "",
-          words: 0,
-          image: null,
-          images: [],
-          via: "reader",
-          base64: base64Data,
-        };
-        return NextResponse.json(pdfResult);
-      }
-
-      html = await response.text();
     } catch (fetchErr: any) {
-      console.warn("Direct fetch error for URL:", finalUrl, fetchErr.message);
-      return NextResponse.json(
-        {
-          error:
-            fetchErr.message ||
-            "Could not reach the website. Please check the URL or paste the article text directly.",
-        },
-        { status: 502 }
-      );
+      console.warn("Direct fetch warning for URL:", finalUrl, fetchErr.message);
+    }
+
+    // Fallback: If direct fetch failed or returned minimal content, use universal proxy reader
+    if (!html || html.length < 150) {
+      try {
+        const jinaUrl = `https://r.jina.ai/${finalUrl}`;
+        const jinaRes = await fetch(jinaUrl, {
+          headers: {
+            "User-Agent": "PostPilot/1.0",
+            Accept: "text/plain, text/markdown, */*",
+          },
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (jinaRes.ok) {
+          const jinaText = await jinaRes.text();
+          if (jinaText && jinaText.length > 100) {
+            const titleMatch = jinaText.match(/^Title:\s*(.+)$/m);
+            const timeMatch = jinaText.match(/^Published Time:\s*(.+)$/m);
+            const contentMatch = jinaText.match(/Markdown Content:\s*([\s\S]+)$/);
+
+            const parsedTitle = titleMatch ? titleMatch[1].trim() : extractSiteName(finalUrl);
+            const published = timeMatch ? timeMatch[1].trim() : null;
+            const rawBody = contentMatch ? contentMatch[1].trim() : jinaText;
+
+            // Extract candidate images from markdown links ![...](url)
+            const mdImgMatches = rawBody.matchAll(/!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g);
+            const fallbackImages: ExtractedImage[] = [];
+            const seenFallbacks = new Set<string>();
+
+            for (const m of mdImgMatches) {
+              const rawImgUrl = m[1];
+              const upgraded = upgradeImageUrl(rawImgUrl);
+              const key = upgraded.toLowerCase().split("?")[0];
+              if (
+                !seenFallbacks.has(key) &&
+                !/\.(svg|ico)$/i.test(upgraded) &&
+                !/(avatar|author|bio|profile|headshot|icon|logo|badge|sponsor|advert)/i.test(upgraded)
+              ) {
+                seenFallbacks.add(key);
+                fallbackImages.push({
+                  url: upgraded,
+                  alt: parsedTitle,
+                  main: fallbackImages.length === 0,
+                });
+                if (fallbackImages.length >= 25) break;
+              }
+            }
+
+            const cleanBody = rawBody
+              .replace(/!\[.*?\]\(.*?\)/g, " ")
+              .replace(/\[([^\]]+)\]\(.*?\)/g, "$1")
+              .replace(/[#*`_>]/g, "")
+              .replace(/\n{3,}/g, "\n\n")
+              .trim();
+
+            const wordCount = (cleanBody.match(/[\p{L}\p{N}]+/gu) || []).length;
+            fallbackResult = {
+              kind: "url",
+              url: finalUrl,
+              siteName: extractSiteName(finalUrl),
+              title: parsedTitle,
+              published,
+              description: cleanBody.slice(0, 200),
+              text: cleanBody,
+              words: wordCount,
+              image: fallbackImages[0]?.url || null,
+              images: fallbackImages,
+              via: "reader",
+            };
+          }
+        }
+      } catch (jinaErr: any) {
+        console.warn("Proxy reader fallback warning:", jinaErr.message);
+      }
+    }
+
+    if (fallbackResult) {
+      if (urlCache.size >= MAX_CACHE_ENTRIES) {
+        const oldestKey = urlCache.keys().next().value;
+        if (oldestKey) urlCache.delete(oldestKey);
+      }
+      urlCache.set(normalizedUrl, { data: fallbackResult, expiresAt: Date.now() + CACHE_TTL_MS });
+      return NextResponse.json(fallbackResult);
     }
 
     if (!html || html.length < 50) {
       return NextResponse.json(
-        { error: "The target webpage returned empty content." },
+        {
+          error:
+            "Could not reach or extract content from this URL. Please verify the URL is public or paste the article text directly into the Text tab.",
+        },
         { status: 422 }
       );
     }
@@ -238,7 +489,8 @@ export async function POST(req: NextRequest) {
 
     const siteName = extractSiteName(finalUrl, ogSiteMatch ? ogSiteMatch[1] : null);
     const heroImageRaw = ogImageMatch ? ogImageMatch[1].trim() : null;
-    const heroImage = heroImageRaw ? resolveUrl(heroImageRaw, finalUrl) : null;
+    const heroImageResolved = heroImageRaw ? resolveUrl(heroImageRaw, finalUrl) : null;
+    const heroImage = heroImageResolved ? upgradeImageUrl(heroImageResolved) : null;
     const published = publishedMatch ? publishedMatch[1].trim() : null;
 
     // 2. FAST JSON-LD EXTRACTION (Sub-millisecond direct structured data)
@@ -297,35 +549,84 @@ export async function POST(req: NextRequest) {
 
     const targetHtml = articleContainerMatch ? articleContainerMatch[0] : cleanHtml;
 
-    // Candidate Images Collection
-    const imgMatches = targetHtml.matchAll(/<img[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/gi);
+    // Candidate Images Collection with High-Resolution Upgrading & Noise Filtering
+    // Strip author boxes, sidebars, related posts, comments before extracting article images
+    const imageTargetHtml = targetHtml
+      .replace(
+        /<(?:div|section|aside|header|footer|figure|p|span)[^>]+(?:class|id)=["'][^"']*(?:author|byline|bio|profile|writer|contributor|avatar|user-info|editor|credit|about-the)[^"']*["'][\s\S]*?<\/(?:div|section|aside|header|footer|figure|p|span)>/gi,
+        " "
+      )
+      .replace(
+        /<(?:div|section|aside)[^>]+(?:class|id)=["'][^"']*(?:comment|discussion|reaction|reply|thread)[^"']*["'][\s\S]*?<\/(?:div|section|aside)>/gi,
+        " "
+      )
+      .replace(
+        /<(?:div|section|aside)[^>]+(?:class|id)=["'][^"']*(?:sidebar|widget|related|recommended|more-stories|popular|trending|promo|newsletter|subscribe|signup)[^"']*["'][\s\S]*?<\/(?:div|section|aside)>/gi,
+        " "
+      )
+      .replace(
+        /<(?:div|section|nav|ul)[^>]+(?:class|id)=["'][^"']*(?:share|social|follow|navbar|navigation|breadcrumb|menu)[^"']*["'][\s\S]*?<\/(?:div|section|nav|ul)>/gi,
+        " "
+      );
+
+    const imgTags = imageTargetHtml.match(/<img[^>]+>/gi) || [];
     const candidateImages: ExtractedImage[] = [];
     const seenUrls = new Set<string>();
 
     if (heroImage) {
       candidateImages.push({ url: heroImage, alt: title, main: true });
-      seenUrls.add(heroImage);
+      seenUrls.add(heroImage.toLowerCase().split("?")[0]);
     }
 
-    for (const match of imgMatches) {
-      const tag = match[0];
-      const srcMatch = tag.match(/(?:src|data-src|data-original)=["']([^"']+)["']/i);
-      const altMatch = tag.match(/alt=["']([^"']*)["']/i);
-      if (srcMatch && srcMatch[1]) {
-        const fullSrc = resolveUrl(srcMatch[1], finalUrl);
+    for (const tag of imgTags) {
+      const candidate = extractImageCandidate(tag, finalUrl);
+      if (candidate && candidate.url) {
+        const urlKey = candidate.url.toLowerCase().split("?")[0];
         if (
-          fullSrc &&
-          !seenUrls.has(fullSrc) &&
-          !/\.(svg|ico)$/i.test(fullSrc) &&
-          !/(avatar|logo|icon|tracking|pixel|badge|sponsor|advert)/i.test(fullSrc)
+          !seenUrls.has(urlKey) &&
+          !/\.(svg|ico)$/i.test(candidate.url) &&
+          !/(avatar|logo|icon|tracking|pixel|badge|sponsor|advert)/i.test(candidate.url)
         ) {
-          seenUrls.add(fullSrc);
+          seenUrls.add(urlKey);
           candidateImages.push({
-            url: fullSrc,
-            alt: altMatch ? decodeHtmlEntities(altMatch[1].trim()) : "",
+            url: candidate.url,
+            alt: candidate.alt || title,
             main: false,
           });
-          if (candidateImages.length >= 20) break;
+          if (candidateImages.length >= 25) break;
+        }
+      }
+    }
+
+    // Also check <source> tags in <picture> elements for webp/avif/highres sources
+    const sourceMatches = imageTargetHtml.matchAll(
+      /<source[^>]+(?:srcset|data-srcset)=["']([^"']+)["'][^>]*>/gi
+    );
+    for (const sMatch of sourceMatches) {
+      if (candidateImages.length >= 25) break;
+      const srcset = sMatch[1];
+      const candidates = srcset
+        .split(",")
+        .map((c) => c.trim().split(/\s+/)[0])
+        .filter(Boolean);
+      const bestUrl = candidates[candidates.length - 1];
+      if (bestUrl && !bestUrl.startsWith("data:")) {
+        const resolved = resolveUrl(bestUrl, finalUrl);
+        if (resolved) {
+          const upgraded = upgradeImageUrl(resolved);
+          const urlKey = upgraded.toLowerCase().split("?")[0];
+          if (
+            !seenUrls.has(urlKey) &&
+            !/\.(svg|ico)$/i.test(upgraded) &&
+            !/(avatar|logo|icon|tracking|pixel|badge|sponsor|advert)/i.test(upgraded)
+          ) {
+            seenUrls.add(urlKey);
+            candidateImages.push({
+              url: upgraded,
+              alt: title,
+              main: false,
+            });
+          }
         }
       }
     }

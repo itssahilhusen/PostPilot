@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
 import {
   Calendar as CalendarIcon,
@@ -25,159 +25,196 @@ import {
   Check,
   TrendingUp,
   Bot,
+  Eye,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { DailyFlywheelModal } from "./DailyFlywheelModal";
+import {
+  PageHeader,
+  CalendarViewType,
+  PageToolbar,
+  CalendarCard,
+  CalendarPostItem,
+  ContentCard,
+  EmptyState,
+  PostDetailDrawer,
+  AddSlotModal,
+  DailyFlywheelDrawer,
+  ConfirmationDialog,
+  StatusBadge,
+  PrimaryButton,
+  SecondaryButton,
+} from "@/components/design-system";
 
 interface CalendarViewProps {
-  onOpenComposer: (post?: any) => void;
+  onOpenComposer?: (post?: any) => void;
 }
-
-export interface ScheduledPost {
-  id: string;
-  title: string;
-  content: string;
-  status: "SCHEDULED" | "PUBLISHED" | "DRAFT" | "PENDING_REVIEW";
-  platforms: string[];
-  scheduledAt?: string | null;
-  publishedAt?: string | null;
-  createdAt?: string;
-  impressions?: number;
-  engagements?: number;
-}
-
-const PLATFORM_CONFIGS: Record<string, { name: string; icon: string; invertDark?: boolean }> = {
-  x: { name: "X", icon: "/images/platforms/x-light.svg", invertDark: true },
-  linkedin: { name: "LinkedIn", icon: "/images/platforms/linkedin.svg" },
-  threads: { name: "Threads", icon: "/images/platforms/threads.svg", invertDark: true },
-  instagram: { name: "Instagram", icon: "/images/platforms/instagram.svg" },
-  tiktok: { name: "TikTok", icon: "/images/platforms/tiktok-dark.svg", invertDark: true },
-  youtube: { name: "YouTube", icon: "/images/platforms/youtube.svg" },
-  facebook: { name: "Facebook", icon: "/images/platforms/facebook.svg" },
-};
 
 export function CalendarView({ onOpenComposer }: CalendarViewProps) {
   // Navigation & View States
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
-  const [viewMode, setViewMode] = useState<"week" | "month" | "list">("week");
-  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<CalendarViewType>("week");
+  const [selectedChannel, setSelectedChannel] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Posts State
-  const [posts, setPosts] = useState<ScheduledPost[]>([]);
+  const [posts, setPosts] = useState<CalendarPostItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Modals & Selection
-  const [selectedPost, setSelectedPost] = useState<ScheduledPost | null>(null);
-  const [isQuickScheduleOpen, setIsQuickScheduleOpen] = useState(false);
-  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
-  const [isFlywheelModalOpen, setIsFlywheelModalOpen] = useState(false);
-  const [rescheduleDate, setRescheduleDate] = useState("");
-  const [rescheduleTime, setRescheduleTime] = useState("10:00");
+  // Modals & Drawers State
+  const [selectedPost, setSelectedPost] = useState<CalendarPostItem | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isAddSlotOpen, setIsAddSlotOpen] = useState(false);
+  const [isFlywheelOpen, setIsFlywheelOpen] = useState(false);
+  const [slotPrefillDate, setSlotPrefillDate] = useState<string>("");
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
-  // New Slot Form State
-  const [slotTitle, setSlotTitle] = useState("");
-  const [slotContent, setSlotContent] = useState("");
-  const [slotDate, setSlotDate] = useState("");
-  const [slotTime, setSlotTime] = useState("10:00");
-  const [slotPlatforms, setSlotPlatforms] = useState<string[]>(["x", "linkedin"]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Fetch / Seed Posts
+  const seedFallbackPosts = useCallback(() => {
+    const today = new Date();
+    // Monday of current week
+    const currentDay = today.getDay();
+    const diffToMon = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
+    const monday = new Date(today.setDate(diffToMon));
 
-  // Initial Seed / Fetch
-  const fetchPosts = async () => {
+    const makeDate = (dayOffset: number, hours: number, minutes: number) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + dayOffset);
+      d.setHours(hours, minutes, 0, 0);
+      return d.toISOString();
+    };
+
+    // Reference screenshot high-fidelity post items:
+    const seeds: CalendarPostItem[] = [
+      {
+        id: "seed_1",
+        title: "Meet the new eau de parfum collection",
+        content: "Crafted with rare natural essences and cold-pressed botanical oils. Discover our limited series online today.\n\n#newdrop #botanical #fragrance #luxury",
+        status: "SCHEDULED",
+        platforms: ["threads", "x"],
+        scheduledAt: makeDate(0, 9, 0), // Mon 09:00
+        image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=600&h=450&fit=crop",
+        tag: "#newdrop",
+        authorName: "Nevo David",
+        authorHandle: "@nevo_david",
+        authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+      },
+      {
+        id: "seed_2",
+        title: "We're partnering with world-class distillers",
+        content: "Amber reserve edition. 100 numbered decanters dropping this Tuesday at 08:30 AM exclusively for members.\n\n#limited #reserve #parfum",
+        status: "SCHEDULED",
+        platforms: ["threads", "x", "linkedin"],
+        scheduledAt: makeDate(1, 8, 30), // Tue 08:30
+        image: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?w=600&h=450&fit=crop",
+        tag: "#limited",
+        authorName: "Nevo David",
+        authorHandle: "@nevo_david",
+        authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+      },
+      {
+        id: "seed_3",
+        title: "Discover our new 30-day botanical extract",
+        content: "Formulated without synthetic stabilizers. Designed for long-lasting sillage throughout your workday.\n\n#discovery #wellness #cleanbeauty",
+        status: "SCHEDULED",
+        platforms: ["linkedin", "threads"],
+        scheduledAt: makeDate(0, 10, 30), // Mon 10:30
+        image: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=600&h=450&fit=crop",
+        tag: "#discovery",
+        authorName: "Nova Clay",
+        authorHandle: "@nova_clay",
+        authorAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&fit=crop&crop=face",
+      },
+      {
+        id: "seed_4",
+        title: "Limited bottle, weekend release exclusive",
+        content: "Smoky cedarwood & dark plum. Available at select concept stores across Paris and Tokyo.\n\n#limited #specialedition #tokyo",
+        status: "SCHEDULED",
+        platforms: ["linkedin", "instagram"],
+        scheduledAt: makeDate(2, 11, 0), // Wed 11:00
+        image: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?w=600&h=450&fit=crop",
+        tag: "#limited",
+        authorName: "Nova Clay",
+        authorHandle: "@nova_clay",
+        authorAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&fit=crop&crop=face",
+      },
+      {
+        id: "seed_5",
+        title: "New collection drops in flagship stores",
+        content: "Experience the complete fragrance bar at Acme Co flagship locations starting this Thursday.\n\n#teaser #design #architecture",
+        status: "SCHEDULED",
+        platforms: ["x", "threads"],
+        scheduledAt: makeDate(3, 9, 30), // Thu 09:30
+        image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=600&h=450&fit=crop",
+        tag: "#teaser",
+        authorName: "Acme Co",
+        authorHandle: "@acme_co",
+        authorAvatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&h=100&fit=crop",
+      },
+      {
+        id: "seed_6",
+        title: "Behind the Scent: Creative Direction Q&A",
+        content: "Over the last 6 months our perfumers and visual team created 14 bespoke fragrance chords.\n\n#behindthescenes #storytelling",
+        status: "PUBLISHED",
+        platforms: ["x", "linkedin"],
+        scheduledAt: makeDate(-2, 14, 0),
+        publishedAt: makeDate(-2, 14, 0),
+        image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=600&h=450&fit=crop",
+        tag: "#published",
+        authorName: "Nevo David",
+        authorHandle: "@nevo_david",
+        authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+      },
+    ];
+
+    setPosts(seeds);
+  }, []);
+
+  const fetchPosts = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch("/api/posts");
       const data = await res.json();
       if (data.posts && Array.isArray(data.posts) && data.posts.length > 0) {
-        setPosts(data.posts);
+        // Map backend posts and fill visual fallbacks if missing
+        const mapped: CalendarPostItem[] = data.posts.map((p: any, idx: number) => ({
+          ...p,
+          status: p.status || "SCHEDULED",
+          platforms: Array.isArray(p.platforms) ? p.platforms : ["x", "linkedin"],
+          image:
+            p.mediaUrls?.[0] ||
+            p.image ||
+            (idx % 2 === 0
+              ? "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=600&h=450&fit=crop"
+              : "https://images.unsplash.com/photo-1547887537-6158d64c35b3?w=600&h=450&fit=crop"),
+          tag: p.title?.toLowerCase().includes("limited") ? "#limited" : "#newdrop",
+          authorName: p.authorName || "Nevo David",
+          authorHandle: p.authorHandle || "@nevo_david",
+          authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
+        }));
+        setPosts(mapped);
       } else {
-        // High quality seed posts for realistic scheduling experience
         seedFallbackPosts();
       }
     } catch (err) {
-      console.warn("Could not fetch /api/posts, loading local sample schedule:", err);
+      console.warn("Falling back to seed schedule:", err);
       seedFallbackPosts();
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const seedFallbackPosts = () => {
-    const today = new Date();
-    const makeDate = (offsetDays: number, hours: number, minutes: number) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + offsetDays);
-      d.setHours(hours, minutes, 0, 0);
-      return d.toISOString();
-    };
-
-    const initialSeeds: ScheduledPost[] = [
-      {
-        id: "seed_1",
-        title: "10 AI Engineering Paradigms for 2027",
-        content: "Here is what 6 months of shipping autonomous sub-agents taught our core engineering team:\n\n1. Deterministic scaffolds beat infinite generation loops.\n2. Bounded AST inspection catches 90% of regressions before deploy.\n3. Keep your data layer typed and isolated.",
-        status: "SCHEDULED",
-        platforms: ["x", "linkedin", "threads"],
-        scheduledAt: makeDate(0, 10, 30),
-      },
-      {
-        id: "seed_2",
-        title: "Why Visual Storytelling Drives 4.2x Engagement",
-        content: "Stop posting plain text essays without visual hooks. Here are the 3 slide frameworks we use to turn boring case studies into viral carousels.",
-        status: "SCHEDULED",
-        platforms: ["linkedin", "instagram"],
-        scheduledAt: makeDate(1, 14, 0),
-      },
-      {
-        id: "seed_3",
-        title: "Building in Public: Week 42 Growth Sprint",
-        content: "Over the last 7 days we scaled autonomous Instagram carousels with Gemini Flash and Sharp rendering. Here is our exact marketing checklist.",
-        status: "PUBLISHED",
-        platforms: ["x", "threads"],
-        publishedAt: makeDate(-2, 9, 0),
-        scheduledAt: makeDate(-2, 9, 0),
-        impressions: 4820,
-        engagements: 312,
-      },
-      {
-        id: "seed_4",
-        title: "Behind the Scenes: AI Carousel Automation Engine",
-        content: "Autonomous carousel generation with Gemini 3.8 Flash and Sharp compositor. Full pipeline walkthrough dropping this afternoon.",
-        status: "SCHEDULED",
-        platforms: ["instagram", "linkedin"],
-        scheduledAt: makeDate(2, 17, 30),
-      },
-      {
-        id: "seed_5",
-        title: "Sunday Deep Dive: The Future of Creator Workflows",
-        content: "How solopreneurs are generating 30 pieces of social content from a single 5-minute raw idea transcript.",
-        status: "DRAFT",
-        platforms: ["x", "linkedin"],
-        scheduledAt: makeDate(3, 20, 0),
-      },
-    ];
-
-    setPosts(initialSeeds);
-  };
+  }, [seedFallbackPosts]);
 
   useEffect(() => {
     fetchPosts();
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search);
-      if (sp.get("approved") === "true") {
-        toast.success("Post approved & scheduled on your Calendar for 10:00 AM!");
-      }
-    }
-  }, []);
+  }, [fetchPosts]);
 
   // Calendar Helpers (Week View)
   const weekDays = useMemo(() => {
     const d = new Date(currentDate);
     const day = d.getDay(); // 0 is Sun
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday is start
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday start
     const monday = new Date(d.setDate(diff));
 
     const days = [];
@@ -213,7 +250,7 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
       days.push({ date: new Date(year, month, i), isCurrentMonth: true });
     }
 
-    // Trailing days to fill 35 or 42 grid
+    // Trailing days to fill 35 grid
     const remaining = 35 - days.length > 0 ? 35 - days.length : 42 - days.length;
     for (let i = 1; i <= remaining; i++) {
       days.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
@@ -238,6 +275,8 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
     const next = new Date(currentDate);
     if (viewMode === "month") {
       next.setMonth(next.getMonth() - 1);
+    } else if (viewMode === "day") {
+      next.setDate(next.getDate() - 1);
     } else {
       next.setDate(next.getDate() - 7);
     }
@@ -248,6 +287,8 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
     const next = new Date(currentDate);
     if (viewMode === "month") {
       next.setMonth(next.getMonth() + 1);
+    } else if (viewMode === "day") {
+      next.setDate(next.getDate() + 1);
     } else {
       next.setDate(next.getDate() + 7);
     }
@@ -258,10 +299,13 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
     setCurrentDate(new Date());
   };
 
-  // Header display string
+  // Header display string (e.g. August 2026 v matching reference screenshot)
   const dateRangeLabel = useMemo(() => {
     if (viewMode === "month") {
       return currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    }
+    if (viewMode === "day") {
+      return currentDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
     }
     const start = weekDays[0];
     const end = weekDays[6];
@@ -274,12 +318,12 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
     return `${startStr} – ${endStr}`;
   }, [currentDate, viewMode, weekDays]);
 
-  // Filtering posts
+  // Filter Posts
   const filteredPosts = useMemo(() => {
     return posts.filter((p) => {
-      // Platform Filter
-      if (selectedPlatform !== "all") {
-        if (!p.platforms || !p.platforms.includes(selectedPlatform)) {
+      // Channel Filter
+      if (selectedChannel !== "all") {
+        if (!p.platforms || !p.platforms.includes(selectedChannel)) {
           return false;
         }
       }
@@ -296,9 +340,9 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
       }
       return true;
     });
-  }, [posts, selectedPlatform, selectedStatus, searchQuery]);
+  }, [posts, selectedChannel, selectedStatus, searchQuery]);
 
-  // Posts grouped by Day for Week View
+  // Posts for day
   const getPostsForDay = (day: Date) => {
     return filteredPosts.filter((p) => {
       const dateStr = p.scheduledAt || p.publishedAt || p.createdAt;
@@ -308,117 +352,39 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
     });
   };
 
-  // Quick Open Scheduler pre-filled with date
-  const openScheduleSlot = (targetDate?: Date) => {
-    const d = targetDate || new Date();
+  // Open Add Slot with Date
+  const handleOpenAddSlotForDay = (d: Date) => {
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
-    setSlotDate(`${yyyy}-${mm}-${dd}`);
-    setSlotTime("10:00");
-    setSlotTitle("");
-    setSlotContent("");
-    setSlotPlatforms(["x", "linkedin"]);
-    setIsQuickScheduleOpen(true);
+    setSlotPrefillDate(`${yyyy}-${mm}-${dd}`);
+    setIsAddSlotOpen(true);
   };
 
-  // Save Scheduled Post Handler
-  const handleSaveScheduledSlot = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!slotTitle.trim() && !slotContent.trim()) {
-      toast.error("Please enter a title or post draft");
-      return;
-    }
-
-    setIsSubmitting(true);
-    const scheduledDateTime = new Date(`${slotDate}T${slotTime}:00`);
-
-    const newPostPayload = {
-      title: slotTitle.trim() || "Scheduled Post",
-      content: slotContent.trim() || slotTitle.trim(),
-      platforms: slotPlatforms,
-      scheduledAt: scheduledDateTime.toISOString(),
-      status: "SCHEDULED",
-    };
-
-    try {
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newPostPayload),
-      });
-
-      const data = await res.json();
-      const savedPost: ScheduledPost = data.post || {
-        id: "post_" + Date.now(),
-        ...newPostPayload,
-        status: "SCHEDULED",
-      };
-
-      setPosts((prev) => [savedPost, ...prev]);
-      setIsQuickScheduleOpen(false);
-      toast.success("Post scheduled successfully!", {
-        description: `Set for ${scheduledDateTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })} at ${slotTime}`,
-      });
-    } catch (err) {
-      console.error(err);
-      // Optimistic fallback
-      const fallbackPost: ScheduledPost = {
-        id: "post_" + Date.now(),
-        ...newPostPayload,
-        status: "SCHEDULED",
-      };
-      setPosts((prev) => [fallbackPost, ...prev]);
-      setIsQuickScheduleOpen(false);
-      toast.success("Post scheduled (saved locally)!");
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Open Add Slot Generic
+  const handleOpenScheduleSlot = () => {
+    setSlotPrefillDate(new Date().toISOString().split("T")[0]);
+    setIsAddSlotOpen(true);
   };
 
-  // Reschedule Action
-  const handleRescheduleSubmit = async () => {
-    if (!selectedPost || !rescheduleDate) return;
-    const newDateTime = new Date(`${rescheduleDate}T${rescheduleTime}:00`);
-
-    try {
-      await fetch(`/api/posts/${selectedPost.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scheduledAt: newDateTime.toISOString() }),
-      });
-    } catch (err) {
-      console.warn("PATCH fallback:", err);
-    }
-
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === selectedPost.id ? { ...p, scheduledAt: newDateTime.toISOString() } : p
-      )
-    );
-    setIsRescheduleOpen(false);
-    setSelectedPost(null);
-    toast.success("Slot rescheduled!", {
-      description: `Moved to ${newDateTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })} at ${rescheduleTime}`,
-    });
+  // Slot Added Success Handler
+  const handleSlotAdded = (newPost: CalendarPostItem) => {
+    setPosts((prev) => [newPost, ...prev]);
   };
 
   // Delete Action
-  const handleDeletePost = async (id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const handleDeletePost = async (id: string) => {
     try {
       await fetch(`/api/posts/${id}`, { method: "DELETE" });
     } catch (err) {
-      console.warn("DELETE fallback:", err);
+      console.warn("Delete local fallback:", err);
     }
     setPosts((prev) => prev.filter((p) => p.id !== id));
-    if (selectedPost?.id === id) setSelectedPost(null);
     toast.success("Post removed from schedule");
   };
 
   // Publish Now Action
-  const handlePublishNow = async (post: ScheduledPost, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const handlePublishNow = async (post: CalendarPostItem) => {
     try {
       await fetch(`/api/posts/${post.id}`, {
         method: "PATCH",
@@ -426,499 +392,265 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
         body: JSON.stringify({ status: "PUBLISHED" }),
       });
     } catch (err) {
-      console.warn("PATCH fallback:", err);
+      console.warn("Publish patch fallback:", err);
     }
     setPosts((prev) =>
       prev.map((p) =>
         p.id === post.id
-          ? { ...p, status: "PUBLISHED", publishedAt: new Date().toISOString() }
+          ? { ...p, status: "PUBLISHED" as const, publishedAt: new Date().toISOString() }
           : p
       )
     );
-    if (selectedPost?.id === post.id) {
-      setSelectedPost({ ...selectedPost, status: "PUBLISHED", publishedAt: new Date().toISOString() });
-    }
     toast.success("Post published across selected channels!");
   };
 
-  // Platform Toggle helper for modal
-  const toggleModalPlatform = (p: string) => {
-    if (slotPlatforms.includes(p)) {
-      if (slotPlatforms.length > 1) {
-        setSlotPlatforms(slotPlatforms.filter((item) => item !== p));
-      } else {
-        toast.error("At least one platform is required");
-      }
-    } else {
-      setSlotPlatforms([...slotPlatforms, p]);
-    }
-  };
-
-  // Metrics
+  // Dynamic Metrics
   const scheduledCount = posts.filter((p) => p.status === "SCHEDULED").length;
   const publishedCount = posts.filter((p) => p.status === "PUBLISHED").length;
 
+  // Time Axis slots for the week view (08:00 to 18:00 matching reference screenshot)
+  const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--bg)] font-sans text-[var(--fg)] select-none">
-      {/* =====================================================================
-          1. HEADER TOOLBAR
-          ===================================================================== */}
-      <header className="shrink-0 border-b border-[var(--line)] bg-[var(--panel)] px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 z-10">
-        {/* Title & Badge */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#c6f432]/20 text-[#365300] dark:text-[#c6f432] flex items-center justify-center font-bold">
-            <CalendarIcon className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-extrabold tracking-tight text-[var(--fg)]">
-                Content Calendar
-              </h1>
-              <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#c6f432] text-black">
-                Scheduling Hub
-              </span>
-            </div>
-            <p className="text-xs text-[var(--muted)]">
-              Plan, schedule, and automate multi-channel releases
-            </p>
-          </div>
-        </div>
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--background)] font-sans text-[var(--foreground)] select-none">
+      {/* 1. Page Header */}
+      <PageHeader
+        title="Content Calendar"
+        badge="Scheduling Hub"
+        subtitle="Plan, schedule, and automate multi-channel releases."
+        dateLabel={dateRangeLabel}
+        onPrevDate={handlePrev}
+        onNextDate={handleNext}
+        onToday={handleToday}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onDailyFlywheel={() => setIsFlywheelOpen(true)}
+        onScheduleSlot={handleOpenScheduleSlot}
+        primaryActionLabel="Schedule Slot"
+      />
 
-        {/* Date Navigation & View Mode */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Previous / Range / Next */}
-          <div className="flex items-center rounded-xl border border-[var(--line)] bg-[var(--bg)] p-1 text-xs font-semibold shadow-2xs">
-            <button
-              type="button"
-              onClick={handlePrev}
-              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors cursor-pointer"
-              title="Previous Range"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
+      {/* 2. Publishing Statistics & Filters Toolbar */}
+      <PageToolbar
+        stats={{
+          scheduledCount,
+          publishedCount,
+          bestTimes: ["10:00 AM", "6:30 PM"],
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearchClear={() => setSearchQuery("")}
+        selectedChannel={selectedChannel}
+        onChannelChange={setSelectedChannel}
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
+      />
 
-            <span className="px-3 min-w-[130px] text-center font-bold text-xs truncate">
-              {dateRangeLabel}
-            </span>
-
-            <button
-              type="button"
-              onClick={handleNext}
-              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors cursor-pointer"
-              title="Next Range"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Today Button */}
-          <button
-            type="button"
-            onClick={handleToday}
-            className="h-9 px-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] text-xs font-bold text-[var(--fg)] hover:bg-[var(--hover)] transition-colors cursor-pointer shadow-2xs"
-          >
-            Today
-          </button>
-
-          {/* View Mode Switcher */}
-          <div className="flex items-center rounded-xl border border-[var(--line)] bg-[var(--bg)] p-1 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setViewMode("week")}
-              className={cn(
-                "px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer",
-                viewMode === "week"
-                  ? "bg-[var(--panel)] text-[var(--fg)] shadow-xs"
-                  : "text-[var(--muted)] hover:text-[var(--fg)]"
-              )}
-            >
-              Week
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("month")}
-              className={cn(
-                "px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer",
-                viewMode === "month"
-                  ? "bg-[var(--panel)] text-[var(--fg)] shadow-xs"
-                  : "text-[var(--muted)] hover:text-[var(--fg)]"
-              )}
-            >
-              Month
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer",
-                viewMode === "list"
-                  ? "bg-[var(--panel)] text-[var(--fg)] shadow-xs"
-                  : "text-[var(--muted)] hover:text-[var(--fg)]"
-              )}
-            >
-              Queue
-            </button>
-          </div>
-
-          {/* Autonomous Daily Flywheel Configuration Button */}
-          <button
-            type="button"
-            onClick={() => setIsFlywheelModalOpen(true)}
-            className="h-9 px-3 rounded-xl border border-[#c6f432]/40 bg-[#c6f432]/10 hover:bg-[#c6f432]/20 text-[#4f7a00] dark:text-[#c6f432] font-black text-xs inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-            title="Configure or test autonomous daily theme page runs"
-          >
-            <Bot className="w-3.5 h-3.5 text-[#c6f432]" />
-            <span>Daily Flywheel</span>
-          </button>
-
-          {/* Primary Schedule Button */}
-          <button
-            type="button"
-            onClick={() => openScheduleSlot()}
-            className="h-9 px-3.5 rounded-xl bg-[#c6f432] text-black font-extrabold text-xs inline-flex items-center gap-1.5 hover:brightness-105 active:scale-95 transition-all shadow-xs cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Schedule Slot</span>
-          </button>
-        </div>
-      </header>
-
-      {/* =====================================================================
-          2. METRICS & FILTER SUB-BAR
-          ===================================================================== */}
-      <div className="shrink-0 border-b border-[var(--line)] bg-[var(--panel)]/70 px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-        {/* Metric Badges */}
-        <div className="flex items-center gap-3 overflow-x-auto py-0.5">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg)] border border-[var(--line)]">
-            <Clock className="w-3.5 h-3.5 text-emerald-500" />
-            <span className="text-[var(--muted)]">Scheduled:</span>
-            <span className="font-bold text-[var(--fg)]">{scheduledCount}</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg)] border border-[var(--line)]">
-            <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
-            <span className="text-[var(--muted)]">Published:</span>
-            <span className="font-bold text-[var(--fg)]">{publishedCount}</span>
-          </div>
-
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg)] border border-[var(--line)]">
-            <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-            <span className="text-[var(--muted)]">Best Time:</span>
-            <span className="font-bold text-[var(--fg)]">10:00 AM & 6:30 PM</span>
-          </div>
-        </div>
-
-        {/* Platform & Status Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Search Box */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-[var(--muted)] absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search scheduled posts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 pl-8 pr-3 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-xs text-[var(--fg)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[#c6f432] w-36 sm:w-48 transition-all"
-            />
-          </div>
-
-          {/* Platform Filter Pills */}
-          <div className="flex items-center gap-1 overflow-x-auto">
-            {["all", "x", "linkedin", "threads", "instagram"].map((plat) => (
-              <button
-                key={plat}
-                type="button"
-                onClick={() => setSelectedPlatform(plat)}
-                className={cn(
-                  "h-8 px-2.5 rounded-lg border text-xs font-semibold capitalize transition-all cursor-pointer flex items-center gap-1.5",
-                  selectedPlatform === plat
-                    ? "bg-[var(--fg)] text-[var(--bg)] border-[var(--fg)]"
-                    : "border-[var(--line)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--hover)]"
-                )}
-              >
-                {plat === "all" ? (
-                  "All Channels"
-                ) : (
-                  <>
-                    <Image
-                      src={PLATFORM_CONFIGS[plat]?.icon || "/images/platforms/x-light.svg"}
-                      alt={plat}
-                      width={12}
-                      height={12}
-                      className={PLATFORM_CONFIGS[plat]?.invertDark ? "dark:invert" : ""}
-                    />
-                    <span>{PLATFORM_CONFIGS[plat]?.name}</span>
-                  </>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Status Filter Dropdown / Pill */}
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="h-8 px-2 rounded-lg border border-[var(--line)] bg-[var(--bg)] text-xs font-semibold text-[var(--fg)] focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Statuses</option>
-            <option value="SCHEDULED">Scheduled</option>
-            <option value="PENDING_REVIEW">Pending Approval</option>
-            <option value="PUBLISHED">Published</option>
-            <option value="DRAFT">Draft</option>
-          </select>
-        </div>
-      </div>
-
-      {/* =====================================================================
-          3. MAIN CALENDAR BODY
-          ===================================================================== */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
-        {/* ==================== A. WEEK VIEW ==================== */}
+      {/* 3. Main Calendar Views */}
+      <div className="flex-1 overflow-auto bg-[var(--background)] relative">
+        {/* =====================================================================
+            VIEW 1: WEEK VIEW (Pixel-perfect replica of reference screenshot)
+            ===================================================================== */}
         {viewMode === "week" && (
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-3 min-h-[580px] h-full">
-            {weekDays.map((dayDate, idx) => {
-              const dayPosts = getPostsForDay(dayDate);
-              const dayIsToday = isToday(dayDate);
-              const dayName = dayDate.toLocaleDateString("en-US", { weekday: "short" });
-              const dayNum = dayDate.getDate();
+          <div className="min-w-[960px] h-full flex flex-col p-4 sm:p-6 overflow-x-auto">
+            {/* Week Columns Header Grid */}
+            <div className="grid grid-cols-[60px_repeat(7,1fr)] gap-3 mb-3 shrink-0">
+              {/* Empty gutter for time column */}
+              <div />
 
-              return (
-                <div
-                  key={idx}
-                  className={cn(
-                    "flex flex-col rounded-2xl border bg-[var(--panel)] p-3 transition-all min-h-[420px] shadow-2xs group/col",
-                    dayIsToday
-                      ? "border-[#c6f432] ring-1 ring-[#c6f432]/40"
-                      : "border-[var(--line)] hover:border-[var(--muted)]"
-                  )}
-                >
-                  {/* Day Header */}
-                  <div className="flex items-center justify-between border-b border-[var(--line)] pb-2.5 mb-2.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-[var(--fg)] uppercase tracking-wide">
-                        {dayName}
-                      </span>
-                      {dayIsToday && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-[#c6f432] text-black">
-                          Today
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs font-bold",
-                        dayIsToday
-                          ? "bg-[#c6f432] text-black"
-                          : "text-[var(--muted)] bg-[var(--bg)]"
-                      )}
-                    >
-                      {dayNum}
-                    </div>
-                  </div>
-
-                  {/* Post Slots Container */}
-                  <div className="flex-1 space-y-2 overflow-y-auto pr-0.5">
-                    {dayPosts.map((post) => {
-                      const postTimeStr = post.scheduledAt || post.publishedAt || post.createdAt;
-                      const timeFormatted = postTimeStr
-                        ? new Date(postTimeStr).toLocaleTimeString("en-US", {
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })
-                        : "10:00 AM";
-
-                      const isPublished = post.status === "PUBLISHED";
-                      const isDraft = post.status === "DRAFT";
-
-                      return (
-                        <div
-                          key={post.id}
-                          onClick={() => setSelectedPost(post)}
-                          className={cn(
-                            "p-2.5 rounded-xl border bg-[var(--bg)] hover:border-[#c6f432] cursor-pointer transition-all space-y-1.5 group/card shadow-2xs relative",
-                            isPublished
-                              ? "border-blue-500/30"
-                              : isDraft
-                              ? "border-amber-500/30"
-                              : "border-[var(--line)]"
-                          )}
-                        >
-                          {/* Time & Status Row */}
-                          <div className="flex items-center justify-between text-[10px]">
-                            <span
-                              className={cn(
-                                "flex items-center gap-1 font-semibold",
-                                isPublished
-                                  ? "text-blue-600 dark:text-blue-400"
-                                  : isDraft
-                                  ? "text-amber-600 dark:text-amber-400"
-                                  : "text-emerald-600 dark:text-emerald-400"
-                              )}
-                            >
-                              <Clock className="w-2.5 h-2.5" /> {timeFormatted}
-                            </span>
-
-                            {/* Platforms */}
-                            <div className="flex items-center gap-1">
-                              {(post.platforms || ["x", "linkedin"]).map((plat) => (
-                                <div
-                                  key={plat}
-                                  className="w-4 h-4 rounded-full bg-[var(--hover)] flex items-center justify-center p-0.5"
-                                  title={PLATFORM_CONFIGS[plat]?.name || plat}
-                                >
-                                  <Image
-                                    src={PLATFORM_CONFIGS[plat]?.icon || "/images/platforms/x-light.svg"}
-                                    alt={plat}
-                                    width={10}
-                                    height={10}
-                                    className={PLATFORM_CONFIGS[plat]?.invertDark ? "dark:invert" : ""}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Post Title */}
-                          <p className="text-xs font-bold text-[var(--fg)] line-clamp-2 leading-snug group-hover/card:text-[#365300] dark:group-hover/card:text-[#c6f432] transition-colors">
-                            {post.title}
-                          </p>
-
-                          {/* Post Snippet */}
-                          <p className="text-[10px] text-[var(--muted)] line-clamp-2 leading-relaxed">
-                            {post.content}
-                          </p>
-
-                          {/* Action Hover Buttons */}
-                          <div className="pt-1 flex items-center justify-between text-[10px] border-t border-[var(--line)]/60 text-[var(--muted)]">
-                            <span className="capitalize font-mono text-[9px] font-semibold">
-                              {post.status.toLowerCase()}
-                            </span>
-
-                            <div className="flex items-center gap-1 opacity-80 group-hover/card:opacity-100">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onOpenComposer({
-                                    id: post.id,
-                                    title: post.title,
-                                    content: post.content,
-                                    platforms: post.platforms,
-                                  });
-                                }}
-                                className="p-1 hover:text-[var(--fg)] transition-colors"
-                                title="Edit in Composer"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => handleDeletePost(post.id, e)}
-                                className="p-1 hover:text-red-500 transition-colors"
-                                title="Delete Slot"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Add Slot Button for Day */}
-                    <button
-                      type="button"
-                      onClick={() => openScheduleSlot(dayDate)}
-                      className="w-full rounded-xl border border-dashed border-[var(--line)] hover:border-[#c6f432] hover:bg-[var(--hover)] py-2 text-xs font-bold text-[var(--muted)] hover:text-[var(--fg)] transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-2"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Slot</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ==================== B. MONTH VIEW ==================== */}
-        {viewMode === "month" && (
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 shadow-2xs">
-            {/* Weekday headers */}
-            <div className="grid grid-cols-7 gap-1 border-b border-[var(--line)] pb-2 mb-2 text-center text-xs font-extrabold uppercase tracking-wider text-[var(--muted)]">
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-              <span>Sun</span>
-            </div>
-
-            {/* Days Matrix */}
-            <div className="grid grid-cols-7 gap-1.5">
-              {monthDays.map(({ date: dayDate, isCurrentMonth }, idx) => {
-                const dayPosts = getPostsForDay(dayDate);
-                const dayIsToday = isToday(dayDate);
-                const dayNum = dayDate.getDate();
+              {/* Day column headers */}
+              {weekDays.map((day, idx) => {
+                const todayFlag = isToday(day);
+                const dayPosts = getPostsForDay(day);
 
                 return (
                   <div
                     key={idx}
-                    onClick={() => openScheduleSlot(dayDate)}
                     className={cn(
-                      "min-h-[100px] sm:min-h-[120px] p-2 rounded-xl border transition-all flex flex-col justify-between cursor-pointer group",
-                      dayIsToday
-                        ? "border-[#c6f432] bg-[#c6f432]/5"
-                        : isCurrentMonth
-                        ? "border-[var(--line)] bg-[var(--bg)] hover:border-[var(--muted)]"
-                        : "border-transparent bg-[var(--hover)]/30 opacity-40 hover:opacity-70"
+                      "flex items-center justify-between p-2.5 rounded-xl border bg-[var(--surface)] transition-all",
+                      todayFlag
+                        ? "border-[#C5F52A] shadow-[0_0_15px_-3px_rgba(197,245,42,0.25)] ring-1 ring-[#C5F52A]/50"
+                        : "border-[var(--border)]"
                     )}
                   >
-                    {/* Top Row: Date & Count */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-baseline gap-1.5 min-w-0">
+                      <span className="text-base font-bold font-mono text-[var(--foreground)]">
+                        {day.getDate()}
+                      </span>
+                      <span className="text-xs font-semibold text-[var(--muted)] uppercase truncate">
+                        {day.toLocaleDateString("en-US", { weekday: "short" })}
+                      </span>
+                      {todayFlag && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#C5F52A] shrink-0" />
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {dayPosts.length > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#C5F52A]/15 text-[#C5F52A] border border-[#C5F52A]/30">
+                          {dayPosts.length}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAddSlotForDay(day)}
+                        className="w-6 h-6 rounded-lg bg-[var(--surface-secondary)] hover:bg-[var(--surface-secondary)]/80 text-[var(--muted)] hover:text-[var(--foreground)] flex items-center justify-center transition-colors cursor-pointer"
+                        title="Add slot for this day"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Time Grid Matrix */}
+            <div className="relative flex-1 min-h-[640px] border border-[var(--border)] rounded-2xl bg-[var(--surface)] overflow-hidden">
+              {/* Horizontal Time Lines Background */}
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none py-2">
+                {timeSlots.map((time, idx) => (
+                  <div key={idx} className="flex items-center w-full border-b border-dashed border-[var(--border)]/40 h-14">
+                    <span className="w-14 pl-3 text-[11px] font-mono text-[var(--muted)] shrink-0 select-none">
+                      {time}
+                    </span>
+                    <div className="flex-1 h-full" />
+                  </div>
+                ))}
+              </div>
+
+              {/* 7 Columns Container */}
+              <div className="relative z-10 grid grid-cols-[60px_repeat(7,1fr)] h-full min-h-[640px]">
+                {/* Time Axis Gutter */}
+                <div className="w-[60px]" />
+
+                {/* Day Columns */}
+                {weekDays.map((day, colIdx) => {
+                  const dayPosts = getPostsForDay(day);
+                  const todayFlag = isToday(day);
+
+                  return (
+                    <div
+                      key={colIdx}
+                      className={cn(
+                        "relative flex flex-col gap-3 p-2 border-l border-[var(--border)]/60 min-h-full transition-colors",
+                        todayFlag && "bg-[#C5F52A]/[0.015]"
+                      )}
+                    >
+                      {dayPosts.map((post) => (
+                        <CalendarCard
+                          key={post.id}
+                          post={post}
+                          onClick={(p) => {
+                            setSelectedPost(p);
+                            setIsDetailOpen(true);
+                          }}
+                          onEdit={(p) => {
+                            if (onOpenComposer) {
+                              onOpenComposer(p);
+                            } else {
+                              setSelectedPost(p);
+                              setIsDetailOpen(true);
+                            }
+                          }}
+                          onDelete={(id, e) => {
+                            e.stopPropagation();
+                            setDeleteCandidateId(id);
+                          }}
+                          onPublishNow={(p, e) => {
+                            e.stopPropagation();
+                            handlePublishNow(p);
+                          }}
+                        />
+                      ))}
+
+                      {/* Empty Column Guide */}
+                      {dayPosts.length === 0 && (
+                        <div
+                          onClick={() => handleOpenAddSlotForDay(day)}
+                          className="flex-1 flex flex-col items-center justify-center p-4 text-center border-2 border-dashed border-transparent hover:border-[var(--border)]/80 rounded-xl transition-all cursor-pointer group"
+                        >
+                          <Plus className="w-4 h-4 text-[var(--muted)] group-hover:text-[#C5F52A] group-hover:scale-125 transition-all opacity-0 group-hover:opacity-100" />
+                          <span className="text-[10px] text-[var(--muted)] group-hover:text-[var(--foreground)] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            Add Slot
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =====================================================================
+            VIEW 2: MONTH VIEW
+            ===================================================================== */}
+        {viewMode === "month" && (
+          <div className="min-w-[800px] p-4 sm:p-6 flex flex-col h-full">
+            {/* Month Day Names */}
+            <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => (
+                <div key={i} className="py-1">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Month Grid Cells */}
+            <div className="grid grid-cols-7 gap-2 flex-1 auto-rows-fr">
+              {monthDays.map((cell, idx) => {
+                const dayPosts = getPostsForDay(cell.date);
+                const todayFlag = isToday(cell.date);
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => handleOpenAddSlotForDay(cell.date)}
+                    className={cn(
+                      "flex flex-col p-2.5 rounded-2xl border transition-all cursor-pointer min-h-[105px]",
+                      todayFlag
+                        ? "bg-[var(--surface)] border-[#C5F52A] ring-1 ring-[#C5F52A]/50 shadow-xs"
+                        : cell.isCurrentMonth
+                        ? "bg-[var(--surface)] border-[var(--border)] hover:border-[#C5F52A]/40"
+                        : "bg-[var(--surface-secondary)]/30 border-[var(--border)]/40 opacity-40"
+                    )}
+                  >
+                    <div className="flex items-center justify-between pb-1.5">
                       <span
                         className={cn(
-                          "w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold font-mono",
-                          dayIsToday
-                            ? "bg-[#c6f432] text-black"
-                            : "text-[var(--fg)]"
+                          "text-xs font-bold font-mono",
+                          todayFlag ? "text-[#C5F52A]" : "text-[var(--foreground)]"
                         )}
                       >
-                        {dayNum}
+                        {cell.date.getDate()}
                       </span>
-
                       {dayPosts.length > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#c6f432]/20 text-[#365300] dark:text-[#c6f432]">
+                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold font-mono bg-[#C5F52A]/15 text-[#C5F52A]">
                           {dayPosts.length}
                         </span>
                       )}
                     </div>
 
-                    {/* Posts snippet pills */}
-                    <div className="space-y-1 my-1 overflow-hidden">
+                    <div className="flex flex-col gap-1 overflow-hidden">
                       {dayPosts.slice(0, 2).map((p) => (
                         <div
                           key={p.id}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedPost(p);
+                            setIsDetailOpen(true);
                           }}
-                          className="px-1.5 py-0.5 rounded text-[10px] font-semibold truncate bg-[var(--panel)] border border-[var(--line)] text-[var(--fg)] hover:border-[#c6f432]"
+                          className="px-2 py-1 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)] text-[10px] font-semibold text-[var(--foreground)] truncate hover:border-[#C5F52A]/50 transition-colors"
                         >
                           {p.title}
                         </div>
                       ))}
                       {dayPosts.length > 2 && (
-                        <div className="text-[9px] font-mono text-[var(--muted)] pl-1">
+                        <span className="text-[9px] text-[var(--muted)] font-bold pl-1">
                           +{dayPosts.length - 2} more
-                        </div>
+                        </span>
                       )}
-                    </div>
-
-                    {/* Bottom: Fast Add Slot Indicator */}
-                    <div className="text-[10px] text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity text-right">
-                      + Add
                     </div>
                   </div>
                 );
@@ -927,501 +659,209 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
           </div>
         )}
 
-        {/* ==================== C. QUEUE / LIST VIEW ==================== */}
-        {viewMode === "list" && (
-          <div className="space-y-3 max-w-4xl mx-auto">
-            <div className="flex items-center justify-between px-2 text-xs font-bold text-[var(--muted)]">
-              <span>{filteredPosts.length} Total Scheduled & Published Slots</span>
-              <span>Sorted by Timeline</span>
+        {/* =====================================================================
+            VIEW 3: DAY VIEW (Chronological Daily Timeline)
+            ===================================================================== */}
+        {viewMode === "day" && (
+          <div className="max-w-4xl mx-auto p-4 sm:p-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)]">
+              <div>
+                <h3 className="text-base font-bold text-[var(--foreground)]">
+                  {currentDate.toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </h3>
+                <p className="text-xs text-[var(--muted)]">
+                  {getPostsForDay(currentDate).length} posts scheduled for this day
+                </p>
+              </div>
+
+              <PrimaryButton
+                size="sm"
+                icon={<Plus className="w-3.5 h-3.5" />}
+                onClick={() => handleOpenAddSlotForDay(currentDate)}
+              >
+                Add Slot
+              </PrimaryButton>
             </div>
 
-            {filteredPosts.length === 0 ? (
-              <div className="p-12 text-center rounded-2xl border border-dashed border-[var(--line)] bg-[var(--panel)] space-y-3">
-                <CalendarDays className="w-10 h-10 text-[var(--muted)] mx-auto opacity-50" />
-                <h3 className="text-sm font-bold text-[var(--fg)]">No matching slots in queue</h3>
-                <p className="text-xs text-[var(--muted)]">
-                  Add a slot or adjust your platform/status filters.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => openScheduleSlot()}
-                  className="px-4 py-2 rounded-xl bg-[#c6f432] text-black font-extrabold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Plus className="w-4 h-4" /> Schedule New Content
-                </button>
-              </div>
-            ) : (
-              filteredPosts.map((post) => {
-                const postTimeStr = post.scheduledAt || post.publishedAt || post.createdAt;
-                const postDateObj = postTimeStr ? new Date(postTimeStr) : new Date();
-                const dateStrFormatted = postDateObj.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                });
-                const timeStrFormatted = postDateObj.toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                });
-
-                return (
-                  <div
+            {/* Timeline */}
+            <div className="flex flex-col gap-3">
+              {getPostsForDay(currentDate).length === 0 ? (
+                <EmptyState
+                  title="No posts scheduled today"
+                  description="Keep your cadence consistent by adding a post or generating a carousel with the AI engine."
+                  actionLabel="Schedule Post"
+                  onAction={() => handleOpenAddSlotForDay(currentDate)}
+                />
+              ) : (
+                getPostsForDay(currentDate).map((post) => (
+                  <ContentCard
                     key={post.id}
-                    onClick={() => setSelectedPost(post)}
-                    className="p-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] hover:border-[#c6f432] transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer shadow-2xs group"
-                  >
-                    <div className="space-y-1.5 flex-1 min-w-0">
+                    id={post.id}
+                    title={post.title}
+                    excerpt={post.content}
+                    status={post.status}
+                    platforms={post.platforms}
+                    image={post.image}
+                    category={post.tag}
+                    authorName={post.authorName}
+                    authorAvatar={post.authorAvatar}
+                    onClick={() => {
+                      setSelectedPost(post);
+                      setIsDetailOpen(true);
+                    }}
+                    actions={
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[var(--hover)] text-[var(--fg)] border border-[var(--line)]">
-                          {post.status}
-                        </span>
-                        <span className="flex items-center gap-1 text-xs font-mono font-bold text-[var(--muted)]">
-                          <Clock className="w-3 h-3 text-emerald-500" />
-                          {dateStrFormatted} at {timeStrFormatted}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePublishNow(post);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-[#C5F52A]/15 hover:bg-[#C5F52A]/25 text-[#C5F52A] text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Publish Now
+                        </button>
                       </div>
+                    }
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        )}
 
-                      <h4 className="text-sm font-bold text-[var(--fg)] group-hover:text-[#365300] dark:group-hover:text-[#c6f432] transition-colors truncate">
-                        {post.title}
-                      </h4>
-                      <p className="text-xs text-[var(--muted)] line-clamp-2">
-                        {post.content}
-                      </p>
-                    </div>
+        {/* =====================================================================
+            VIEW 4: QUEUE VIEW (Upcoming Scheduled Posts List)
+            ===================================================================== */}
+        {viewMode === "queue" && (
+          <div className="max-w-4xl mx-auto p-4 sm:p-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-[var(--foreground)]">Upcoming Post Queue</h3>
+                <p className="text-xs text-[var(--muted)]">
+                  Chronological pipeline of all scheduled releases
+                </p>
+              </div>
 
-                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                      {/* Channels */}
-                      <div className="flex items-center gap-1">
-                        {(post.platforms || []).map((plat) => (
-                          <div
-                            key={plat}
-                            className="w-6 h-6 rounded-lg bg-[var(--bg)] border border-[var(--line)] flex items-center justify-center p-1"
-                            title={PLATFORM_CONFIGS[plat]?.name || plat}
+              <PrimaryButton
+                size="sm"
+                icon={<Plus className="w-3.5 h-3.5" />}
+                onClick={handleOpenScheduleSlot}
+              >
+                Add to Queue
+              </PrimaryButton>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {filteredPosts.length === 0 ? (
+                <EmptyState
+                  title="Your queue is clear"
+                  description="There are no posts currently in your publishing queue."
+                  actionLabel="Schedule a Slot"
+                  onAction={handleOpenScheduleSlot}
+                />
+              ) : (
+                filteredPosts.map((post) => (
+                  <ContentCard
+                    key={post.id}
+                    id={post.id}
+                    title={post.title}
+                    excerpt={post.content}
+                    status={post.status}
+                    platforms={post.platforms}
+                    image={post.image}
+                    category={post.tag}
+                    authorName={post.authorName}
+                    authorAvatar={post.authorAvatar}
+                    date={post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString() : undefined}
+                    onClick={() => {
+                      setSelectedPost(post);
+                      setIsDetailOpen(true);
+                    }}
+                    actions={
+                      <div className="flex items-center gap-2">
+                        {post.status !== "PUBLISHED" && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePublishNow(post);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-[#C5F52A]/15 hover:bg-[#C5F52A]/25 text-[#C5F52A] text-xs font-bold transition-colors cursor-pointer"
                           >
-                            <Image
-                              src={PLATFORM_CONFIGS[plat]?.icon || "/images/platforms/x-light.svg"}
-                              alt={plat}
-                              width={14}
-                              height={14}
-                              className={PLATFORM_CONFIGS[plat]?.invertDark ? "dark:invert" : ""}
-                            />
-                          </div>
-                        ))}
+                            Publish Now
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteCandidateId(post.id);
+                          }}
+                          className="p-1 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-
-                      {/* Actions */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenComposer({
-                            id: post.id,
-                            title: post.title,
-                            content: post.content,
-                            platforms: post.platforms,
-                          });
-                        }}
-                        className="px-3 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-xs font-bold hover:bg-[var(--hover)] transition-colors cursor-pointer"
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeletePost(post.id, e)}
-                        className="p-2 rounded-xl text-[var(--muted)] hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
-                        title="Delete slot"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                    }
+                  />
+                ))
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* =====================================================================
-          4. INLINE QUICK SCHEDULE MODAL
-          ===================================================================== */}
-      {isQuickScheduleOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
-          onClick={() => setIsQuickScheduleOpen(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-6 shadow-2xl space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-[#c6f432]" />
-                <h3 className="text-base font-extrabold text-[var(--fg)]">Schedule Content Slot</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsQuickScheduleOpen(false)}
-                className="w-7 h-7 rounded-lg hover:bg-[var(--hover)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--fg)]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* Detail Drawer */}
+      <PostDetailDrawer
+        post={selectedPost}
+        isOpen={isDetailOpen}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedPost(null);
+        }}
+        onDelete={(id) => handleDeletePost(id)}
+        onPublishNow={(p) => handlePublishNow(p)}
+      />
 
-            <form onSubmit={handleSaveScheduledSlot} className="space-y-4">
-              {/* Post Title */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[var(--fg)]">Post Title / Hook</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 5 AI tools that saved us 20 hours this week"
-                  value={slotTitle}
-                  onChange={(e) => setSlotTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-xs text-[var(--fg)] focus:outline-none focus:border-[#c6f432]"
-                  required
-                />
-              </div>
+      {/* Add Slot Modal */}
+      <AddSlotModal
+        isOpen={isAddSlotOpen}
+        onClose={() => setIsAddSlotOpen(false)}
+        initialDate={slotPrefillDate}
+        onSuccess={handleSlotAdded}
+      />
 
-              {/* Post Content */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[var(--fg)]">Content Body</label>
-                <textarea
-                  rows={4}
-                  placeholder="Draft your social post text or outline here..."
-                  value={slotContent}
-                  onChange={(e) => setSlotContent(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-xs text-[var(--fg)] focus:outline-none focus:border-[#c6f432] resize-none"
-                />
-              </div>
+      {/* Daily Flywheel Drawer */}
+      <DailyFlywheelDrawer
+        isOpen={isFlywheelOpen}
+        onClose={() => setIsFlywheelOpen(false)}
+        availableProjectsCount={posts.length + 8}
+        approvedDraftsCount={posts.filter((p) => p.status === "SCHEDULED").length}
+        upcomingScheduledCount={scheduledCount}
+      />
 
-              {/* Target Platforms */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[var(--fg)]">Publish Channels</label>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(PLATFORM_CONFIGS).map(([key, config]) => {
-                    const isSelected = slotPlatforms.includes(key);
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => toggleModalPlatform(key)}
-                        className={cn(
-                          "px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all",
-                          isSelected
-                            ? "bg-[var(--fg)] text-[var(--bg)] border-[var(--fg)]"
-                            : "border-[var(--line)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--fg)]"
-                        )}
-                      >
-                        <Image
-                          src={config.icon}
-                          alt={config.name}
-                          width={12}
-                          height={12}
-                          className={config.invertDark && !isSelected ? "dark:invert" : ""}
-                        />
-                        <span>{config.name}</span>
-                        {isSelected && <Check className="w-3 h-3 ml-0.5" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Date & Time Row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[var(--fg)]">Scheduled Date</label>
-                  <input
-                    type="date"
-                    value={slotDate}
-                    onChange={(e) => setSlotDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-xs text-[var(--fg)] focus:outline-none focus:border-[#c6f432]"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[var(--fg)]">Scheduled Time</label>
-                  <input
-                    type="time"
-                    value={slotTime}
-                    onChange={(e) => setSlotTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-xs text-[var(--fg)] focus:outline-none focus:border-[#c6f432]"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-2 flex items-center justify-between border-t border-[var(--line)]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsQuickScheduleOpen(false);
-                    onOpenComposer({
-                      title: slotTitle,
-                      content: slotContent,
-                      platforms: slotPlatforms,
-                    });
-                  }}
-                  className="text-xs font-bold text-[var(--muted)] hover:text-[var(--fg)] flex items-center gap-1 cursor-pointer"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open Full Composer</span>
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsQuickScheduleOpen(false)}
-                    className="px-3.5 py-2 rounded-xl border border-[var(--line)] text-xs font-bold hover:bg-[var(--hover)] text-[var(--fg)]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 rounded-xl bg-[#c6f432] text-black text-xs font-extrabold hover:brightness-105 active:scale-95 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-                  >
-                    {isSubmitting ? "Scheduling..." : "Schedule Post"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* =====================================================================
-          5. POST DETAIL & ACTIONS MODAL
-          ===================================================================== */}
-      {selectedPost && !isRescheduleOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
-          onClick={() => setSelectedPost(null)}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-6 shadow-2xl space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#c6f432] text-black">
-                  {selectedPost.status}
-                </span>
-                <span className="text-xs font-mono text-[var(--muted)]">
-                  {selectedPost.scheduledAt
-                    ? new Date(selectedPost.scheduledAt).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })
-                    : "No scheduled date"}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedPost(null)}
-                className="w-7 h-7 rounded-lg hover:bg-[var(--hover)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--fg)]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Post Title & Content */}
-            <div className="space-y-2">
-              <h3 className="text-base font-extrabold text-[var(--fg)]">
-                {selectedPost.title}
-              </h3>
-              <div className="p-3.5 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-xs text-[var(--fg)] leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
-                {selectedPost.content}
-              </div>
-            </div>
-
-            {/* Platform Badges */}
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-[var(--muted)]">Target Channels</span>
-              <div className="flex items-center gap-2 pt-1">
-                {(selectedPost.platforms || []).map((plat) => (
-                  <div
-                    key={plat}
-                    className="px-2.5 py-1 rounded-lg border border-[var(--line)] bg-[var(--bg)] flex items-center gap-1.5 text-xs font-semibold"
-                  >
-                    <Image
-                      src={PLATFORM_CONFIGS[plat]?.icon || "/images/platforms/x-light.svg"}
-                      alt={plat}
-                      width={12}
-                      height={12}
-                      className={PLATFORM_CONFIGS[plat]?.invertDark ? "dark:invert" : ""}
-                    />
-                    <span>{PLATFORM_CONFIGS[plat]?.name || plat}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)]">
-              <button
-                type="button"
-                onClick={() => handleDeletePost(selectedPost.id)}
-                className="px-3 py-1.5 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete</span>
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const d = selectedPost.scheduledAt
-                      ? new Date(selectedPost.scheduledAt)
-                      : new Date();
-                    setRescheduleDate(d.toISOString().slice(0, 10));
-                    setRescheduleTime(
-                      `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
-                    );
-                    setIsRescheduleOpen(true);
-                  }}
-                  className="px-3 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--bg)] hover:bg-[var(--hover)] text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Reschedule
-                </button>
-
-                {selectedPost.status === "PENDING_REVIEW" && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await fetch(`/api/automations/daily-pipeline/review?action=approve&postId=${selectedPost.id}`);
-                        setPosts((prev) =>
-                          prev.map((p) =>
-                            p.id === selectedPost.id ? { ...p, status: "SCHEDULED" } : p
-                          )
-                        );
-                        setSelectedPost({ ...selectedPost, status: "SCHEDULED" });
-                        toast.success("Post approved & scheduled for 10:00 AM!");
-                      } catch (e: any) {
-                        toast.error(e.message || "Failed to approve");
-                      }
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-[#c6f432] hover:bg-[#d6ff52] text-[#141414] text-xs font-black transition-all shadow-xs cursor-pointer inline-flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Approve & Schedule</span>
-                  </button>
-                )}
-
-                {selectedPost.status !== "PUBLISHED" && selectedPost.status !== "PENDING_REVIEW" && (
-                  <button
-                    type="button"
-                    onClick={() => handlePublishNow(selectedPost)}
-                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center gap-1"
-                  >
-                    <Send className="w-3 h-3" />
-                    <span>Publish Now</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const post = selectedPost;
-                    setSelectedPost(null);
-                    onOpenComposer({
-                      id: post.id,
-                      title: post.title,
-                      content: post.content,
-                      platforms: post.platforms,
-                    });
-                  }}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#c6f432] text-black text-xs font-extrabold hover:brightness-105 active:scale-95 transition-all shadow-xs cursor-pointer inline-flex items-center gap-1"
-                >
-                  <Edit3 className="w-3 h-3" />
-                  <span>Edit</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =====================================================================
-          6. RESCHEDULE MODAL
-          ===================================================================== */}
-      {isRescheduleOpen && selectedPost && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
-          onClick={() => setIsRescheduleOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5 shadow-2xl space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[var(--line)] pb-2.5">
-              <h3 className="text-sm font-extrabold text-[var(--fg)]">Reschedule Slot</h3>
-              <button
-                type="button"
-                onClick={() => setIsRescheduleOpen(false)}
-                className="w-6 h-6 rounded-lg hover:bg-[var(--hover)] flex items-center justify-center text-[var(--muted)]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[var(--fg)]">New Date</label>
-                <input
-                  type="date"
-                  value={rescheduleDate}
-                  onChange={(e) => setRescheduleDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-xs text-[var(--fg)] focus:outline-none focus:border-[#c6f432]"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[var(--fg)]">New Time</label>
-                <input
-                  type="time"
-                  value={rescheduleTime}
-                  onChange={(e) => setRescheduleTime(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-[var(--line)] bg-[var(--bg)] text-xs text-[var(--fg)] focus:outline-none focus:border-[#c6f432]"
-                />
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center justify-end gap-2 border-t border-[var(--line)]">
-              <button
-                type="button"
-                onClick={() => setIsRescheduleOpen(false)}
-                className="px-3 py-1.5 rounded-xl border border-[var(--line)] text-xs font-bold hover:bg-[var(--hover)] text-[var(--fg)]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRescheduleSubmit}
-                className="px-4 py-1.5 rounded-xl bg-[#c6f432] text-black text-xs font-extrabold hover:brightness-105 active:scale-95 transition-all shadow-xs cursor-pointer"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Autonomous Daily Flywheel Configuration Modal */}
-      <DailyFlywheelModal
-        isOpen={isFlywheelModalOpen}
-        onClose={() => setIsFlywheelModalOpen(false)}
-        onScheduledSuccess={fetchPosts}
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={Boolean(deleteCandidateId)}
+        onClose={() => setDeleteCandidateId(null)}
+        onConfirm={() => {
+          if (deleteCandidateId) {
+            handleDeletePost(deleteCandidateId);
+            setDeleteCandidateId(null);
+          }
+        }}
+        title="Delete Scheduled Slot"
+        message="Are you sure you want to remove this post from your schedule? This action cannot be undone."
+        confirmLabel="Delete"
+        isDestructive={true}
       />
     </div>
   );
 }
+
 export default CalendarView;
