@@ -10,6 +10,8 @@ export type NavTabId =
   | "feed"
   | "style"
   | "create"
+  | "raw"
+  | "video"
   | "caption"
   | "calendar"
   | "media";
@@ -42,9 +44,10 @@ export function Sidebar({
   const pathname = usePathname();
 
   const isFeed = activeTab === "feed" || pathname === "/feed" || pathname === "/ideas";
-  const isPipeline = activeTab === "pipeline" || pathname === "/raw" || pathname === "/pipelines";
+  const isPipeline = activeTab === "pipeline" || pathname === "/pipelines";
   const isStyle = activeTab === "style" || pathname === "/style";
   const isCreate = activeTab === "create" || pathname === "/result" || pathname === "/studio";
+  const isVideo = activeTab === "raw" || activeTab === "video" || pathname === "/raw" || pathname === "/videos";
   const isCalendar = activeTab === "calendar" || pathname === "/calendar";
 
   return (
@@ -171,7 +174,23 @@ export function Sidebar({
           </svg>
         </Link>
 
-        {/* 5. Caption */}
+        {/* 5. Video Studio (Active on /raw) */}
+        <Link
+          href="/raw"
+          className={cn(
+            "relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors shadow-sm",
+            isVideo
+              ? "bg-[#C5F52A] text-black"
+              : "text-neutral-400 hover:text-white hover:bg-neutral-900/60"
+          )}
+          title="AI Video Studio"
+        >
+          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+            <path d="M4 4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2H4zm6 4.5l6 3.5-6 3.5v-7z" />
+          </svg>
+        </Link>
+
+        {/* 6. Caption */}
         <Link
           href="/media"
           className="w-10 h-10 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900/60 flex items-center justify-center transition-colors"
