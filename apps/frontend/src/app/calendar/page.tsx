@@ -1,14 +1,20 @@
-"use client";
+import type { Metadata } from "next";
+import { AppShell } from "@/components/design-system/AppShell";
+import { ToastProvider } from "@/components/design-system/Toast";
+import { CalendarView } from "@/components/calendar/CalendarView";
 
-import React, { Suspense } from "react";
-import { SwiperaStudioWorkspace } from "@/components/workspace/SwiperaStudioWorkspace";
-
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Content Calendar — Social Media Publishing Hub — PostPilot",
+  description:
+    "Intelligent multi-channel social media publishing calendar with automated AI scheduling and channel orchestration.",
+};
 
 export default function CalendarPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-full bg-[var(--bg)]" />}>
-      <SwiperaStudioWorkspace initialTab="calendar" />
-    </Suspense>
+    <ToastProvider>
+      <AppShell activeTab="calendar">
+        <CalendarView />
+      </AppShell>
+    </ToastProvider>
   );
 }
