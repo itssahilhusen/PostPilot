@@ -48,6 +48,7 @@ export function Sidebar({
   const isStyle = activeTab === "style" || pathname === "/style";
   const isCreate = activeTab === "create" || pathname === "/result" || pathname === "/studio";
   const isVideo = activeTab === "raw" || activeTab === "video" || pathname === "/raw" || pathname === "/videos";
+  const isMedia = activeTab === "media" || activeTab === "caption" || pathname === "/media" || pathname === "/media-library";
   const isCalendar = activeTab === "calendar" || pathname === "/calendar";
 
   return (
@@ -190,11 +191,16 @@ export function Sidebar({
           </svg>
         </Link>
 
-        {/* 6. Caption */}
+        {/* 6. Caption & Media Library */}
         <Link
           href="/media"
-          className="w-10 h-10 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900/60 flex items-center justify-center transition-colors"
-          title="Caption"
+          className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+            isMedia
+              ? "bg-brand-lime text-black"
+              : "text-neutral-400 hover:text-white hover:bg-neutral-900/60"
+          )}
+          title="Caption & Media Library"
         >
           <svg
             className="w-5 h-5"
