@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   WORKFLOW_TEMPLATES,
   INITIAL_WORKFLOW_STATE,
@@ -15,10 +15,14 @@ export function WorkflowView() {
   // Search filter for Node Templates
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Canvas zoom & tool state
+  // Canvas zoom, pan & tool state
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [isZoomDropdownOpen, setIsZoomDropdownOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<"pan" | "title" | "box" | "polyline">("pan");
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const isExecutingRef = useRef(false);
   const [isExecuting, setIsExecuting] = useState(false);
 
   // Workflow Data State
@@ -61,6 +65,129 @@ export function WorkflowView() {
   ]);
   const [previewModalImage, setPreviewModalImage] = useState<{ url: string; alt: string; title: string } | null>(null);
 
+  // Canvas & Socket DOM References
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const textIteratorSocketRef = useRef<HTMLDivElement>(null);
+  const promptSocketRef = useRef<HTMLDivElement>(null);
+  const llmIn1SocketRef = useRef<HTMLDivElement>(null);
+  const llmIn2SocketRef = useRef<HTMLDivElement>(null);
+  const llmOutSocketRef = useRef<HTMLDivElement>(null);
+  const imageGenSocketRef = useRef<HTMLDivElement>(null);
+  const importSocketRef = useRef<HTMLDivElement>(null);
+  const videoIn1SocketRef = useRef<HTMLDivElement>(null);
+  const videoIn2SocketRef = useRef<HTMLDivElement>(null);
+  const videoIn3SocketRef = useRef<HTMLDivElement>(null);
+
+  // Dynamic Wire Paths
+  const [wirePaths, setWirePaths] = useState({
+    wire1: "",
+    wire2: "",
+    wire3: "",
+    wire4: "",
+    wire5: "",
+  });
+
+  // Calculate pixel-perfect cubic bezier curves with natural curvature (NO straight lines)
+  const updateWirePaths = useCallback(() => {
+    if (!canvasRef.current) return;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const zoomScale = zoomLevel / 100;
+
+    const getCenter = (el: HTMLElement | null) => {
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      return {
+        x: (rect.left + rect.width / 2 - canvasRect.left - panOffset.x) / zoomScale,
+        y: (rect.top + rect.height / 2 - canvasRect.top - panOffset.y) / zoomScale,
+      };
+    };
+
+    const makeBezier = (
+      p1: { x: number; y: number } | null,
+      p2: { x: number; y: number } | null,
+      fallback: string
+    ) => {
+      if (!p1 || !p2) return fallback;
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      // Smooth horizontal tangent offset proportional to distance
+      const cOffset = Math.min(Math.max(absDx * 0.45, 60), 280);
+      const cx1 = p1.x + cOffset;
+      const cx2 = p2.x - cOffset;
+
+      // ELIMINATE STRAIGHT LINES: If vertical delta is small (|dy| < 80px),
+      // add a natural cable sag (gravity droop) so the wire forms a graceful soft curve
+      let cy1 = p1.y;
+      let cy2 = p2.y;
+
+      if (absDy < 80) {
+        const sag = Math.max(34, 52 - absDy * 0.35);
+        cy1 = p1.y + sag;
+        cy2 = p2.y + sag;
+      }
+
+      return `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${cx1.toFixed(1)} ${cy1.toFixed(1)}, ${cx2.toFixed(1)} ${cy2.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    };
+
+    const pTextOut = getCenter(textIteratorSocketRef.current);
+    const pPromptOut = getCenter(promptSocketRef.current);
+    const pLlmIn1 = getCenter(llmIn1SocketRef.current);
+    const pLlmIn2 = getCenter(llmIn2SocketRef.current);
+    const pLlmOut = getCenter(llmOutSocketRef.current);
+    const pImgOut = getCenter(imageGenSocketRef.current);
+    const pImportOut = getCenter(importSocketRef.current);
+    const pVidIn1 = getCenter(videoIn1SocketRef.current);
+    const pVidIn2 = getCenter(videoIn2SocketRef.current);
+    const pVidIn3 = getCenter(videoIn3SocketRef.current);
+
+    setWirePaths({
+      wire1: makeBezier(pTextOut, pLlmIn1, "M 216 65 C 290 115, 345 125, 420 73"),
+      wire2: makeBezier(pPromptOut, pLlmIn2, "M 256 370 C 340 370, 340 169, 420 169"),
+      wire3: makeBezier(pLlmOut, pVidIn1, "M 628 73 C 850 115, 950 145, 1150 145"),
+      wire4: makeBezier(pImgOut, pVidIn2, "M 368 620 C 650 620, 950 177, 1150 177"),
+      wire5: makeBezier(pImportOut, pVidIn3, "M 700 620 C 880 620, 980 209, 1150 209"),
+    });
+  }, [zoomLevel, panOffset]);
+
+  // Keep wires permanently synchronized with screen resize, zoom, layout shifts and DOM updates
+  useEffect(() => {
+    updateWirePaths();
+    const rafId = requestAnimationFrame(updateWirePaths);
+    const timer1 = setTimeout(updateWirePaths, 60);
+    const timer2 = setTimeout(updateWirePaths, 250);
+    const timer3 = setTimeout(updateWirePaths, 600);
+
+    const handleResize = () => updateWirePaths();
+    window.addEventListener("resize", handleResize);
+
+    const observer = new ResizeObserver(() => {
+      updateWirePaths();
+    });
+    if (canvasRef.current) {
+      observer.observe(canvasRef.current);
+    }
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      window.removeEventListener("resize", handleResize);
+      observer.disconnect();
+    };
+  }, [
+    updateWirePaths,
+    textSockets,
+    promptText,
+    isEditingPrompt,
+    llmPage,
+    videoPage,
+    zoomLevel,
+  ]);
+
   // Filter templates
   const filteredTemplates = WORKFLOW_TEMPLATES.filter((tpl) =>
     tpl.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -88,11 +215,13 @@ export function WorkflowView() {
   const handleExecuteWorkflow = () => {
     if (isExecuting) return;
     setIsExecuting(true);
+    isExecutingRef.current = true;
     toast("Executing pipeline: Text Iterator → Claude Opus 5 → Seedance 2.0...", "info");
 
     setTimeout(() => {
       setCredits((prev) => Math.max(0, prev - 15));
       setIsExecuting(false);
+      isExecutingRef.current = false;
       toast("Pipeline complete! New video variation rendered in 4.2s (15 credits used).", "success");
     }, 2200);
   };
@@ -118,6 +247,27 @@ export function WorkflowView() {
     toast(`Loaded template "${tpl.name}" into canvas palette.`, "info");
   };
 
+  // Canvas Pan Handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (activeTool === "pan" || e.button === 1) {
+      setIsDraggingCanvas(true);
+      dragStartRef.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDraggingCanvas) {
+      setPanOffset({
+        x: e.clientX - dragStartRef.current.x,
+        y: e.clientY - dragStartRef.current.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDraggingCanvas(false);
+  };
+
   return (
     <main
       className="flex-1 flex flex-row gap-3 overflow-hidden relative select-none"
@@ -126,6 +276,17 @@ export function WorkflowView() {
         padding: "0px",
       }}
     >
+      <style>{`
+        @keyframes flowDashGreen {
+          from { stroke-dashoffset: 32; }
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes flowDashLime {
+          from { stroke-dashoffset: 32; }
+          to { stroke-dashoffset: 0; }
+        }
+      `}</style>
+
       {/* ============================================================== */}
       {/* 1. LEFT SIDEBAR PANEL: "Node Templates" / Library Palette      */}
       {/* ============================================================== */}
@@ -140,8 +301,8 @@ export function WorkflowView() {
             "rgba(0, 0, 0, 0.5) 0px 10px 30px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
         }}
       >
-        {/* Search input with lime icon */}
-        <div className="relative flex items-center mb-3 shrink-0">
+        {/* Search input with lime icon - height: 34px */}
+        <div className="relative flex items-center mb-3 shrink-0 h-[34px]">
           <svg
             className="absolute left-2.5 w-4 h-4 text-[#c5f52a]/70 pointer-events-none"
             fill="none"
@@ -156,7 +317,7 @@ export function WorkflowView() {
             placeholder="Search nodes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-white/[0.08] text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-[#c5f52a]/60 transition-colors"
+            className="w-full h-[34px] pl-8 pr-3 py-1.5 rounded-xl border border-white/[0.08] text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-[#c5f52a]/60 transition-colors"
             style={{ background: "rgba(255, 255, 255, 0.05)" }}
           />
         </div>
@@ -254,9 +415,98 @@ export function WorkflowView() {
             "rgba(0, 0, 0, 0.5) 0px 10px 30px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
         }}
       >
+        {/* ============================================================== */}
+        {/* STICKY TOP-RIGHT TOOLBAR                                      */}
+        {/* Stays fixed at top-right, aligned with Node Templates search   */}
+        {/* bar (top-3.5 = 14px, h-[34px], right-3.5 = 14px)              */}
+        {/* ============================================================== */}
+        <div
+          className="absolute top-3.5 right-3.5 flex items-center justify-between px-3 h-[34px] rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.6)] backdrop-blur-md gap-3 z-40 pointer-events-auto"
+          style={{
+            background: "rgba(20, 24, 24, 0.85)",
+            border: "1px solid rgba(255, 255, 255, 0.12)",
+            boxShadow:
+              "rgba(0, 0, 0, 0.4) 0px 8px 20px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset",
+          }}
+        >
+          {/* Left: Run button & Credits */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExecuteWorkflow}
+              disabled={isExecuting}
+              className={cn(
+                "w-6 h-6 rounded-full bg-brand-lime text-black flex items-center justify-center hover:bg-[#b1de22] transition-transform active:scale-95 shadow-sm font-bold",
+                isExecuting && "animate-spin"
+              )}
+              title="Run / Execute Pipeline (15 credits)"
+            >
+              <svg className="w-3 h-3 fill-current ml-0.5" viewBox="0 0 24 24">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+            </button>
+
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-xs font-mono text-white/80">
+              <svg
+                className="w-3.5 h-3.5 text-[#C5F52A]"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
+                  clipRule="evenodd"
+                />
+              </svg>{" "}
+              {credits}
+            </span>
+          </div>
+
+          {/* Right: Note, Download, Delete actions */}
+          <div className="flex items-center gap-2 text-neutral-400">
+            <button
+              onClick={() => toast("Exporting pipeline execution log...", "info")}
+              className="w-5 h-5 rounded hover:text-white flex items-center justify-center transition-colors"
+              title="View / Edit Run Notes"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              onClick={() => toast("Downloading high-definition MP4 master file...", "success")}
+              className="w-5 h-5 rounded hover:text-white flex items-center justify-center transition-colors"
+              title="Download Generated Video"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
+                toast("Resetting pipeline cache.", "info");
+              }}
+              className="w-5 h-5 rounded hover:text-red-400 flex items-center justify-center transition-colors"
+              title="Clear Output Cache"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
         {/* Central Node Graph Area with Dot Matrix Grid Background */}
         <div
-          className="relative flex-1 h-full bg-[#101114] overflow-hidden"
+          ref={canvasRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          className={cn(
+            "relative flex-1 h-full bg-[#101114] overflow-hidden",
+            activeTool === "pan" ? (isDraggingCanvas ? "cursor-grabbing" : "cursor-grab") : "cursor-default"
+          )}
           style={{ background: "rgb(0, 0, 0)" }}
         >
           {/* Dot Matrix Grid */}
@@ -266,90 +516,116 @@ export function WorkflowView() {
               backgroundImage:
                 "radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1px)",
               backgroundSize: "24px 24px",
+              backgroundPosition: `${panOffset.x}px ${panOffset.y}px`,
             }}
           />
 
-          {/* Interactive Luminescent SVG Connecting Wires */}
+          {/* Interactive Luminescent Light SVG Connecting Wires (Sleek light curves, NO straight lines) */}
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none z-10"
             style={{
               overflow: "visible",
-              transform: `scale(${zoomLevel / 100})`,
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel / 100})`,
               transformOrigin: "top left",
             }}
           >
             <defs>
-              <filter id="wire-green-glow" x="-30%" y="-30%" width="160%" height="160%">
-                <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#10b981" floodOpacity="0.6" />
+              <filter id="wire-green-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="0.6" floodColor="#10b981" floodOpacity="0.45" />
               </filter>
-              <filter id="wire-lime-glow" x="-30%" y="-30%" width="160%" height="160%">
-                <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#c5f52a" floodOpacity="0.65" />
+              <filter id="wire-lime-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="0.6" floodColor="#c5f52a" floodOpacity="0.45" />
               </filter>
             </defs>
 
-            {/* Wire 1: Text Iterator Right Socket -> LLM Models Top-Left Socket */}
-            <path
-              d="M 216 65 C 275 65, 290 125, 345 125 C 385 125, 380 73, 420 73"
-              fill="none"
-              stroke="#10b981"
-              strokeWidth={isExecuting ? "2" : "1"}
-              filter="url(#wire-green-glow)"
-              strokeLinecap="round"
-              className={cn("transition-all duration-300", isExecuting && "animate-pulse")}
-            />
+            {/* Wire 1: Text Iterator Right Socket -> LLM Models Top-Left Socket (Curved droop, NO straight line) */}
+            {wirePaths.wire1 && (
+              <g className={cn("transition-opacity duration-300", selectedNodeId && selectedNodeId !== "text-iterator" && selectedNodeId !== "llm-models" ? "opacity-30" : "opacity-100")}>
+                <path
+                  d={wirePaths.wire1}
+                  fill="none"
+                  stroke="#10b981"
+                  strokeWidth={isExecuting ? "1.0" : "0.75"}
+                  opacity="0.88"
+                  filter="url(#wire-green-glow)"
+                  strokeLinecap="round"
+                  style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashGreen 0.8s linear infinite" } : undefined}
+                />
+              </g>
+            )}
 
             {/* Wire 2: Prompt Node Right Socket -> LLM Models Bottom-Left Input Socket */}
-            <path
-              d="M 256 370 C 370 370, 310 169, 420 169"
-              fill="none"
-              stroke="#10b981"
-              strokeWidth={isExecuting ? "2" : "1"}
-              filter="url(#wire-green-glow)"
-              strokeLinecap="round"
-              className={cn("transition-all duration-300", isExecuting && "animate-pulse")}
-            />
+            {wirePaths.wire2 && (
+              <g className={cn("transition-opacity duration-300", selectedNodeId && selectedNodeId !== "prompt" && selectedNodeId !== "llm-models" ? "opacity-30" : "opacity-100")}>
+                <path
+                  d={wirePaths.wire2}
+                  fill="none"
+                  stroke="#10b981"
+                  strokeWidth={isExecuting ? "1.0" : "0.75"}
+                  opacity="0.88"
+                  filter="url(#wire-green-glow)"
+                  strokeLinecap="round"
+                  style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashGreen 0.8s linear infinite" } : undefined}
+                />
+              </g>
+            )}
 
             {/* Wire 3: LLM Models Right Output Socket -> Video Generation Top Input Socket */}
-            <path
-              d="M 628 73 C 715 73, 705 145, 792 145"
-              fill="none"
-              stroke="#c5f52a"
-              strokeWidth={isExecuting ? "2.5" : "1"}
-              filter="url(#wire-lime-glow)"
-              strokeLinecap="round"
-              className={cn("transition-all duration-300", isExecuting && "animate-pulse")}
-            />
+            {wirePaths.wire3 && (
+              <g className={cn("transition-opacity duration-300", selectedNodeId && selectedNodeId !== "llm-models" && selectedNodeId !== "video-gen" ? "opacity-30" : "opacity-100")}>
+                <path
+                  d={wirePaths.wire3}
+                  fill="none"
+                  stroke="#c5f52a"
+                  strokeWidth={isExecuting ? "1.0" : "0.75"}
+                  opacity="0.88"
+                  filter="url(#wire-lime-glow)"
+                  strokeLinecap="round"
+                  style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashLime 0.8s linear infinite" } : undefined}
+                />
+              </g>
+            )}
 
-            {/* Wire 4: Image Generations Right Output Socket -> Video Gen mid input */}
-            <path
-              d="M 368 729 C 490 729, 560 290, 792 177"
-              fill="none"
-              stroke="#c5f52a"
-              strokeWidth={isExecuting ? "2.5" : "1"}
-              filter="url(#wire-lime-glow)"
-              strokeLinecap="round"
-              className={cn("transition-all duration-300", isExecuting && "animate-pulse")}
-            />
+            {/* Wire 4: Image Generations Right Output Socket -> Video Gen Middle Input Socket */}
+            {wirePaths.wire4 && (
+              <g className={cn("transition-opacity duration-300", selectedNodeId && selectedNodeId !== "image-gen" && selectedNodeId !== "video-gen" ? "opacity-30" : "opacity-100")}>
+                <path
+                  d={wirePaths.wire4}
+                  fill="none"
+                  stroke="#c5f52a"
+                  strokeWidth={isExecuting ? "1.0" : "0.75"}
+                  opacity="0.88"
+                  filter="url(#wire-lime-glow)"
+                  strokeLinecap="round"
+                  style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashLime 0.8s linear infinite" } : undefined}
+                />
+              </g>
+            )}
 
-            {/* Wire 5: Import Node Right Output Socket -> Video Generation Bottom-Left Input Socket */}
-            <path
-              d="M 700 729 C 765 729, 740 270, 792 209"
-              fill="none"
-              stroke="#c5f52a"
-              strokeWidth={isExecuting ? "2.5" : "1"}
-              filter="url(#wire-lime-glow)"
-              strokeLinecap="round"
-              className={cn("transition-all duration-300", isExecuting && "animate-pulse")}
-            />
+            {/* Wire 5: Import Node Right Output Socket -> Video Generation Bottom Input Socket */}
+            {wirePaths.wire5 && (
+              <g className={cn("transition-opacity duration-300", selectedNodeId && selectedNodeId !== "import" && selectedNodeId !== "video-gen" ? "opacity-30" : "opacity-100")}>
+                <path
+                  d={wirePaths.wire5}
+                  fill="none"
+                  stroke="#c5f52a"
+                  strokeWidth={isExecuting ? "1.0" : "0.75"}
+                  opacity="0.88"
+                  filter="url(#wire-lime-glow)"
+                  strokeLinecap="round"
+                  style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashLime 0.8s linear infinite" } : undefined}
+                />
+              </g>
+            )}
           </svg>
 
           {/* ============================================================== */}
-          {/* Canvas Nodes Workspace (Scaled with Zoom level)                */}
+          {/* Canvas Nodes Workspace (Scaled & Panned)                       */}
           {/* ============================================================== */}
           <div
-            className="absolute inset-0 p-5 overflow-hidden z-20"
+            className="absolute inset-0 p-5 overflow-hidden z-20 pointer-events-none"
             style={{
-              transform: `scale(${zoomLevel / 100})`,
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel / 100})`,
               transformOrigin: "top left",
             }}
           >
@@ -357,10 +633,13 @@ export function WorkflowView() {
             {/* NODE 1: Text Iterator                                        */}
             {/* ------------------------------------------------------------ */}
             <div
-              onClick={() => setSelectedNodeId("text-iterator")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNodeId("text-iterator");
+              }}
               className={cn(
-                "absolute top-6 left-6 w-48 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer group",
-                selectedNodeId === "text-iterator" ? "ring-1 ring-[#c5f52a] shadow-[0_0_20px_rgba(197,245,42,0.25)]" : ""
+                "absolute top-6 left-6 w-48 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer group pointer-events-auto",
+                selectedNodeId === "text-iterator" ? "ring-1 ring-[#c5f52a] shadow-[0_0_24px_rgba(197,245,42,0.3)]" : ""
               )}
               style={{
                 background: "rgba(20, 24, 24, 0.7)",
@@ -369,9 +648,10 @@ export function WorkflowView() {
                   "rgba(0, 0, 0, 0.5) 0px 12px 32px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset",
               }}
             >
-              {/* Output Socket */}
+              {/* Output Socket - Center is exactly tracked by Ref */}
               <div
-                className="absolute -right-1 top-[41px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10b981] ring-1 ring-black shadow-[0_0_8px_#10b981] z-20"
+                ref={textIteratorSocketRef}
+                className="absolute -right-1.5 top-[41px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#10b981] ring-2 ring-black shadow-[0_0_10px_#10b981] z-30 transition-transform group-hover:scale-125"
                 title="String Output Socket"
               />
 
@@ -477,10 +757,13 @@ export function WorkflowView() {
             {/* NODE 2: Prompt Node                                          */}
             {/* ------------------------------------------------------------ */}
             <div
-              onClick={() => setSelectedNodeId("prompt")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNodeId("prompt");
+              }}
               className={cn(
-                "absolute top-[305px] left-12 w-52 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer",
-                selectedNodeId === "prompt" ? "ring-1 ring-[#c5f52a] shadow-[0_0_20px_rgba(197,245,42,0.25)]" : ""
+                "absolute top-[305px] left-12 w-52 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer pointer-events-auto group",
+                selectedNodeId === "prompt" ? "ring-1 ring-[#c5f52a] shadow-[0_0_24px_rgba(197,245,42,0.3)]" : ""
               )}
               style={{
                 background: "rgba(20, 24, 24, 0.7)",
@@ -489,9 +772,10 @@ export function WorkflowView() {
                   "rgba(0, 0, 0, 0.5) 0px 12px 32px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset",
               }}
             >
-              {/* Output Socket */}
+              {/* Output Socket - Center is exactly tracked by Ref */}
               <div
-                className="absolute -right-1 top-[65px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10b981] ring-1 ring-black shadow-[0_0_8px_#10b981] z-20"
+                ref={promptSocketRef}
+                className="absolute -right-1.5 top-[65px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#10b981] ring-2 ring-black shadow-[0_0_10px_#10b981] z-30 transition-transform group-hover:scale-125"
                 title="Prompt Output Socket"
               />
 
@@ -547,10 +831,13 @@ export function WorkflowView() {
             {/* NODE 3: LLM Models Node                                      */}
             {/* ------------------------------------------------------------ */}
             <div
-              onClick={() => setSelectedNodeId("llm-models")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNodeId("llm-models");
+              }}
               className={cn(
-                "absolute top-6 left-[420px] w-52 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer",
-                selectedNodeId === "llm-models" ? "ring-1 ring-[#c5f52a] shadow-[0_0_20px_rgba(197,245,42,0.25)]" : ""
+                "absolute top-6 left-[420px] w-52 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer pointer-events-auto group",
+                selectedNodeId === "llm-models" ? "ring-1 ring-[#c5f52a] shadow-[0_0_24px_rgba(197,245,42,0.3)]" : ""
               )}
               style={{
                 background: "rgba(20, 24, 24, 0.7)",
@@ -561,17 +848,20 @@ export function WorkflowView() {
             >
               {/* Input Sockets on Left */}
               <div
-                className="absolute -left-1 top-[49px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10b981] ring-1 ring-black shadow-[0_0_8px_#10b981] z-20"
+                ref={llmIn1SocketRef}
+                className="absolute -left-1.5 top-[49px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#10b981] ring-2 ring-black shadow-[0_0_10px_#10b981] z-30 transition-transform group-hover:scale-125"
                 title="Input: Iterator Seed"
               />
               <div
-                className="absolute -left-1 top-[145px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#10b981] ring-1 ring-black shadow-[0_0_8px_#10b981] z-20"
+                ref={llmIn2SocketRef}
+                className="absolute -left-1.5 top-[145px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#10b981] ring-2 ring-black shadow-[0_0_10px_#10b981] z-30 transition-transform group-hover:scale-125"
                 title="Input: System Prompt"
               />
 
               {/* Output Socket on Right */}
               <div
-                className="absolute -right-1 top-[49px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#c5f52a] ring-1 ring-black shadow-[0_0_8px_#c5f52a] z-20"
+                ref={llmOutSocketRef}
+                className="absolute -right-1.5 top-[49px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#c5f52a] ring-2 ring-black shadow-[0_0_10px_#c5f52a] z-30 transition-transform group-hover:scale-125"
                 title="Output: Synthesized Prompt"
               />
 
@@ -694,10 +984,13 @@ export function WorkflowView() {
             {/* NODE 4: Image Generations Node                               */}
             {/* ------------------------------------------------------------ */}
             <div
-              onClick={() => setSelectedNodeId("image-gen")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNodeId("image-gen");
+              }}
               className={cn(
-                "absolute bottom-10 left-[160px] w-52 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer",
-                selectedNodeId === "image-gen" ? "ring-1 ring-[#c5f52a] shadow-[0_0_20px_rgba(197,245,42,0.25)]" : ""
+                "absolute bottom-10 left-[160px] w-52 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer pointer-events-auto group",
+                selectedNodeId === "image-gen" ? "ring-1 ring-[#c5f52a] shadow-[0_0_24px_rgba(197,245,42,0.3)]" : ""
               )}
               style={{
                 background: "rgba(20, 24, 24, 0.7)",
@@ -706,9 +999,10 @@ export function WorkflowView() {
                   "rgba(0, 0, 0, 0.5) 0px 12px 32px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset",
               }}
             >
-              {/* Output Socket */}
+              {/* Output Socket - Center is exactly tracked by Ref */}
               <div
-                className="absolute -right-1 top-[125px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#c5f52a] ring-1 ring-black shadow-[0_0_8px_#c5f52a] z-20"
+                ref={imageGenSocketRef}
+                className="absolute -right-1.5 top-[125px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#c5f52a] ring-2 ring-black shadow-[0_0_10px_#c5f52a] z-30 transition-transform group-hover:scale-125"
                 title="Image Output Socket"
               />
 
@@ -819,10 +1113,13 @@ export function WorkflowView() {
             {/* NODE 5: Import Node                                          */}
             {/* ------------------------------------------------------------ */}
             <div
-              onClick={() => setSelectedNodeId("import")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNodeId("import");
+              }}
               className={cn(
-                "absolute bottom-10 left-[492px] w-52 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer",
-                selectedNodeId === "import" ? "ring-1 ring-[#c5f52a] shadow-[0_0_20px_rgba(197,245,42,0.25)]" : ""
+                "absolute bottom-10 left-[492px] w-52 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer pointer-events-auto group",
+                selectedNodeId === "import" ? "ring-1 ring-[#c5f52a] shadow-[0_0_24px_rgba(197,245,42,0.3)]" : ""
               )}
               style={{
                 background: "rgba(20, 24, 24, 0.7)",
@@ -831,9 +1128,10 @@ export function WorkflowView() {
                   "rgba(0, 0, 0, 0.5) 0px 12px 32px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset",
               }}
             >
-              {/* Output Socket */}
+              {/* Output Socket - Center is exactly tracked by Ref */}
               <div
-                className="absolute -right-1 top-[125px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#c5f52a] ring-1 ring-black shadow-[0_0_8px_#c5f52a] z-20"
+                ref={importSocketRef}
+                className="absolute -right-1.5 top-[125px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#c5f52a] ring-2 ring-black shadow-[0_0_10px_#c5f52a] z-30 transition-transform group-hover:scale-125"
                 title="Import Output Socket"
               />
 
@@ -884,92 +1182,16 @@ export function WorkflowView() {
             </div>
 
             {/* ------------------------------------------------------------ */}
-            {/* FLOATING VIDEO CONTROLS TOOLBAR (Above Video Generation)      */}
-            {/* ------------------------------------------------------------ */}
-            <div
-              className="absolute top-12 right-8 flex items-center justify-between px-3 py-1.5 rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.6)] backdrop-blur-md gap-3 z-30"
-              style={{
-                background: "rgba(20, 24, 24, 0.85)",
-                border: "1px solid rgba(255, 255, 255, 0.12)",
-                boxShadow:
-                  "rgba(0, 0, 0, 0.4) 0px 8px 20px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset",
-              }}
-            >
-              {/* Left: Run button & Credits */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleExecuteWorkflow}
-                  disabled={isExecuting}
-                  className={cn(
-                    "w-6 h-6 rounded-full bg-brand-lime text-black flex items-center justify-center hover:bg-[#b1de22] transition-transform active:scale-95 shadow-sm font-bold",
-                    isExecuting && "animate-spin"
-                  )}
-                  title="Run / Execute Pipeline (15 credits)"
-                >
-                  <svg className="w-3 h-3 fill-current ml-0.5" viewBox="0 0 24 24">
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                </button>
-
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.08] text-xs font-mono text-white/80">
-                  <svg
-                    className="w-3.5 h-3.5 text-[#C5F52A]"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
-                      clipRule="evenodd"
-                    />
-                  </svg>{" "}
-                  {credits}
-                </span>
-              </div>
-
-              {/* Right: Note, Download, Delete actions */}
-              <div className="flex items-center gap-2 text-neutral-400">
-                <button
-                  onClick={() => toast("Exporting pipeline execution log...", "info")}
-                  className="w-5 h-5 rounded hover:text-white flex items-center justify-center transition-colors"
-                  title="View / Edit Run Notes"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => toast("Downloading high-definition MP4 master file...", "success")}
-                  className="w-5 h-5 rounded hover:text-white flex items-center justify-center transition-colors"
-                  title="Download Generated Video"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => {
-                    toast("Resetting pipeline cache.", "info");
-                  }}
-                  className="w-5 h-5 rounded hover:text-red-400 flex items-center justify-center transition-colors"
-                  title="Clear Output Cache"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* ------------------------------------------------------------ */}
             {/* NODE 6: Video Generation Node                                */}
             {/* ------------------------------------------------------------ */}
             <div
-              onClick={() => setSelectedNodeId("video-gen")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNodeId("video-gen");
+              }}
               className={cn(
-                "absolute top-24 right-8 w-64 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer",
-                selectedNodeId === "video-gen" ? "ring-1 ring-[#c5f52a] shadow-[0_0_20px_rgba(197,245,42,0.25)]" : ""
+                "absolute top-24 right-8 w-64 rounded-2xl p-3 backdrop-blur-md transition-all cursor-pointer pointer-events-auto group",
+                selectedNodeId === "video-gen" ? "ring-1 ring-[#c5f52a] shadow-[0_0_24px_rgba(197,245,42,0.3)]" : ""
               )}
               style={{
                 background: "rgba(20, 24, 24, 0.7)",
@@ -978,18 +1200,21 @@ export function WorkflowView() {
                   "rgba(0, 0, 0, 0.5) 0px 12px 32px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset",
               }}
             >
-              {/* 3 Input Sockets on Left */}
+              {/* 3 Input Sockets on Left - Centers are tracked by Refs */}
               <div
-                className="absolute -left-1 top-[49px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#c5f52a] ring-1 ring-black shadow-[0_0_8px_#c5f52a] z-20"
-                title="Input: LLM Direction"
+                ref={videoIn1SocketRef}
+                className="absolute -left-1.5 top-[49px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#c5f52a] ring-2 ring-black shadow-[0_0_10px_#c5f52a] z-30 transition-transform group-hover:scale-125"
+                title="Input 1: LLM Direction"
               />
               <div
-                className="absolute -left-1 top-[81px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#c5f52a] ring-1 ring-black shadow-[0_0_8px_#c5f52a] z-20"
-                title="Input: Image Synth Reference"
+                ref={videoIn2SocketRef}
+                className="absolute -left-1.5 top-[81px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#c5f52a] ring-2 ring-black shadow-[0_0_10px_#c5f52a] z-30 transition-transform group-hover:scale-125"
+                title="Input 2: Image Synth Reference"
               />
               <div
-                className="absolute -left-1 top-[113px] -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#c5f52a] ring-1 ring-black shadow-[0_0_8px_#c5f52a] z-20"
-                title="Input: Keyframe Import"
+                ref={videoIn3SocketRef}
+                className="absolute -left-1.5 top-[113px] -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#c5f52a] ring-2 ring-black shadow-[0_0_10px_#c5f52a] z-30 transition-transform group-hover:scale-125"
+                title="Input 3: Keyframe Import"
               />
 
               <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-white/[0.06] text-neutral-200">
@@ -1146,7 +1371,7 @@ export function WorkflowView() {
                 "w-7 h-7 rounded-xl flex items-center justify-center shadow-sm font-semibold transition-transform hover:scale-105",
                 activeTool === "pan" ? "bg-brand-lime text-black" : "text-neutral-400 hover:text-white hover:bg-white/5"
               )}
-              title="Hand / Pan Tool"
+              title="Hand / Pan Tool (Click & drag to move canvas)"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M7 11V7a2 2 0 014 0v4m0-4a2 2 0 014 0v4m0-4a2 2 0 014 0v7a6 6 0 01-12 0v-3a2 2 0 014 0v3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -1232,9 +1457,13 @@ export function WorkflowView() {
 
             {/* 6. Undo */}
             <button
-              onClick={() => toast("Undo: Reverted last node edit.", "info")}
+              onClick={() => {
+                setPanOffset({ x: 0, y: 0 });
+                setZoomLevel(100);
+                toast("Reset canvas position and zoom.", "info");
+              }}
               className="w-7 h-7 rounded-xl text-neutral-400 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors"
-              title="Undo"
+              title="Reset Canvas View"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M3 10h10a5 5 0 015 5v2M3 10l6-6M3 10l6 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -1258,7 +1487,7 @@ export function WorkflowView() {
           {/* ============================================================== */}
           <button
             onClick={() => setIsChatOpen(!isChatOpen)}
-            className="absolute bottom-4 right-4 z-30 w-11 h-11 rounded-2xl bg-brand-lime text-black flex items-center justify-center shadow-[0_8px_25px_rgba(197,245,42,0.4)] hover:bg-[#b1de22] transition-transform hover:scale-105 active:scale-95 font-bold"
+            className="absolute bottom-4 right-4 z-30 w-11 h-11 rounded-2xl bg-brand-lime text-black flex items-center justify-center shadow-[0_8px_25px_rgba(197,245,42,0.4)] hover:bg-[#b1de22] transition-transform hover:scale-105 active:scale-95 font-bold pointer-events-auto"
             title="Open Pipeline AI Assistant"
           >
             <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
@@ -1376,4 +1605,3 @@ export function WorkflowView() {
     </main>
   );
 }
-
