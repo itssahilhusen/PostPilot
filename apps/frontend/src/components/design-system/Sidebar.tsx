@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 export type NavTabId =
   | "pipeline"
+  | "workflow"
   | "feed"
   | "style"
   | "create"
@@ -44,7 +45,7 @@ export function Sidebar({
   const pathname = usePathname();
 
   const isFeed = activeTab === "feed" || pathname === "/feed" || pathname === "/ideas";
-  const isPipeline = activeTab === "pipeline" || pathname === "/pipelines";
+  const isPipeline = activeTab === "pipeline" || activeTab === "workflow" || pathname === "/workflow" || pathname === "/pipelines";
   const isStyle = activeTab === "style" || pathname === "/style";
   const isCreate = activeTab === "create" || pathname === "/result";
   const isVideo = activeTab === "raw" || activeTab === "video" || pathname === "/raw" || pathname === "/videos";
@@ -71,16 +72,16 @@ export function Sidebar({
     >
       {/* Top App Navigation Icons */}
       <div className="flex flex-col items-center gap-4 w-full">
-        {/* 1. Pipeline */}
+        {/* 1. Pipeline / Workflow */}
         <Link
-          href="/raw"
+          href="/workflow"
           className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
             isPipeline
               ? "bg-brand-lime text-black"
               : "text-neutral-400 hover:text-white hover:bg-neutral-900/60"
           )}
-          title="Pipeline"
+          title="Workflow & Pipeline Studio"
         >
           <svg
             className="w-5 h-5"
