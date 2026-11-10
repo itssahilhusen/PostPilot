@@ -73,10 +73,10 @@ export function Hero({ onOpenTrial }: HeroProps) {
               </button>
 
               <Link
-                href="/studio"
+                href="/feed"
                 className="inline-flex shrink-0 items-center justify-center whitespace-nowrap transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring border border-border bg-card/80 hover:bg-muted text-foreground h-12 rounded-lg px-6 text-base font-semibold gap-2 shadow-xs"
               >
-                Open Studio
+                Go to App
               </Link>
             </div>
 

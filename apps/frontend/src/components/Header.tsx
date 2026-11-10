@@ -208,10 +208,10 @@ export function Header({ onOpenTrial, isDark, onToggleTheme, onLogout }: HeaderP
               </button>
 
               <Link
-                href="/studio"
+                href="/feed"
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
               >
-                <span>Studio</span>
+                <span>Feed</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </>
@@ -305,11 +305,11 @@ export function Header({ onOpenTrial, isDark, onToggleTheme, onLogout }: HeaderP
               {status === "authenticated" && session?.user ? (
                 <>
                   <Link
-                    href="/studio"
+                    href="/feed"
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
                   >
-                    Studio
+                    Feed
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <button

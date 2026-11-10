@@ -98,7 +98,7 @@ export function StyleStudioView() {
                 Clear
               </button>
               <a
-                href="/studio"
+                href="/result"
                 className="text-xs font-bold bg-brand-lime text-black px-3.5 py-1.5 rounded-full hover:bg-brand-limeHover transition-colors flex items-center gap-1 shadow-md shadow-brand-lime/20"
               >
                 Create Carousel →

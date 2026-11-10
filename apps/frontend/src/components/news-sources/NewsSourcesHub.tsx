@@ -324,8 +324,8 @@ export function NewsSourcesHub() {
 
   // Send Article to Carousel Studio
   const handleCreateCarousel = (article: NewsArticleItem) => {
-    const targetUrl = `/studio?tab=create&url=${encodeURIComponent(article.original_url)}&title=${encodeURIComponent(article.title)}&summary=${encodeURIComponent(article.ai_summary || "")}`;
-    toast.success(`Loading "${article.title.slice(0, 40)}..." into Carousel Studio`);
+    const targetUrl = `/result?url=${encodeURIComponent(article.original_url)}&title=${encodeURIComponent(article.title)}&summary=${encodeURIComponent(article.ai_summary || "")}`;
+    toast.success(`Loading "${article.title.slice(0, 40)}..." into PostPilot Studio`);
     router.push(targetUrl);
   };
 
@@ -403,11 +403,11 @@ export function NewsSourcesHub() {
               </button>
 
               <Link
-                href="/studio"
+                href="/result"
                 className="px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-[#171b24] hover:bg-[#202633] text-[#e2e8f0] border border-[#2b3345] transition-all"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Carousel Studio
+                PostPilot Studio
               </Link>
             </div>
           </div>

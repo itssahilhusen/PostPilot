@@ -98,8 +98,11 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
       }
 
       toast.success("Welcome back! Redirecting to feed...");
-      router.push(callbackUrl);
-      router.refresh();
+      if (typeof window !== "undefined") {
+        window.location.href = callbackUrl;
+      } else {
+        router.push(callbackUrl);
+      }
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
       setLoading(false);
@@ -164,7 +167,11 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="w-full flex flex-col space-y-3.5">
+      <form
+        action="javascript:void(0)"
+        onSubmit={handleSubmit}
+        className="w-full flex flex-col space-y-3.5"
+      >
         {/* Full Name Field (Sign Up Mode) */}
         {mode === "signup" && (
           <div>

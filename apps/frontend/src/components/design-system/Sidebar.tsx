@@ -46,7 +46,7 @@ export function Sidebar({
   const isFeed = activeTab === "feed" || pathname === "/feed" || pathname === "/ideas";
   const isPipeline = activeTab === "pipeline" || pathname === "/pipelines";
   const isStyle = activeTab === "style" || pathname === "/style";
-  const isCreate = activeTab === "create" || pathname === "/result" || pathname === "/studio";
+  const isCreate = activeTab === "create" || pathname === "/result";
   const isVideo = activeTab === "raw" || activeTab === "video" || pathname === "/raw" || pathname === "/videos";
   const isMedia = activeTab === "media" || activeTab === "caption" || pathname === "/media" || pathname === "/media-library";
   const isCalendar = activeTab === "calendar" || pathname === "/calendar";

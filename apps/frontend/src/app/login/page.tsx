@@ -1,16 +1,16 @@
 import React, { Suspense } from "react";
 import { Metadata } from "next";
-import { AuthForm } from "@/components/auth/AuthForm";
+import { SignInView } from "@/components/auth/SignInView";
 
 export const metadata: Metadata = {
-  title: "Sign in — PostPilot",
-  description: "Sign in to your PostPilot automation workspace.",
+  title: "Sign In & Pro Showcase — PostPilot",
+  description: "Sign in to your PostPilot Dark Obsidian workspace and social publishing studio.",
 };
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black" />}>
-      <AuthForm initialMode="signin" />
+    <Suspense fallback={<div className="w-full h-screen bg-[#0c1011]" />}>
+      <SignInView />
     </Suspense>
   );
 }

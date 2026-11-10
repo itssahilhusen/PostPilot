@@ -88,8 +88,8 @@ export default function SwiperaLanding() {
       {/* ============ NAVIGATION ============ */}
       <header className="nav" id="nav" style={{ position: "sticky", top: 0, zIndex: 50 }}>
         <a className="logo" href="/">
-          <span className="mark">S</span>
-          <span className="word">Swipera</span>
+          <span className="mark">P</span>
+          <span className="word">PostPilot</span>
         </a>
         <nav className="nav-links" aria-label="Main menu">
           <a href="#how">How it works</a>
@@ -97,28 +97,13 @@ export default function SwiperaLanding() {
           <a href="#styles">Styles</a>
           <a href="#pricing">Pricing</a>
           <a href="#faq">FAQ</a>
-          <a href="/guide">
-            Guides{" "}
-            <span className="mono" style={{ fontSize: "9px", opacity: 0.6 }}>
-              KO
-            </span>
-          </a>
         </nav>
         <div className="nav-cta">
-          <a
-            className="lang-sw mono"
-            href="/?lang=ko"
-            id="lang-sw"
-            title="한국어로 보기"
-            aria-label="Switch to Korean"
-          >
-            <i className="fas fa-globe"></i> KO
-          </a>
-          <a className="btn ghost" href="/studio?lang=en" data-login>
+          <a className="btn ghost" href="/login">
             Log in
           </a>
-          <a className="btn solid" href="/studio?lang=en#try">
-            Try with my text
+          <a className="btn solid" href="/signup">
+            Get Started
           </a>
         </div>
       </header>
@@ -159,7 +144,7 @@ export default function SwiperaLanding() {
               <form
                 className="try"
                 id="try"
-                action="/studio"
+                action="/result"
                 method="get"
                 autoComplete="off"
               >
@@ -508,10 +493,10 @@ export default function SwiperaLanding() {
             <span className="pill l">Caption + hashtags</span>
             <a
               className="btn solid"
-              href="/studio?lang=en#try"
+              href="/signup"
               style={{ marginLeft: "8px" }}
             >
-              Try with my text
+              Get Started
             </a>
           </div>
         </section>
@@ -592,8 +577,8 @@ export default function SwiperaLanding() {
             <button className="btn ghost" id="style-next" aria-label="Next">
               <i className="fas fa-arrow-right"></i>
             </button>
-            <a className="btn solid" href="/studio?lang=en#try">
-              Try with my text
+            <a className="btn solid" href="/signup">
+              Get Started
             </a>
           </div>
         </section>
@@ -910,7 +895,7 @@ export default function SwiperaLanding() {
             <h2 className="h-display">Stuck? Just ask.</h2>
           </div>
           <div className="support-grid">
-            <a className="sp rv" href="/studio?lang=en#try">
+            <a className="sp rv" href="/signup">
               <i className="fas fa-robot"></i>
               <h3>AI notice · copyright</h3>
               <p>
@@ -918,15 +903,15 @@ export default function SwiperaLanding() {
                 summary)
               </p>
             </a>
-            <a className="sp rv" href="/studio?lang=en#try">
+            <a className="sp rv" href="/signup">
               <i className="fas fa-circle-play"></i>
               <h3>3-minute start</h3>
-              <p>Open the studio and hit the sample button to see the whole flow instantly.</p>
+              <p>Open PostPilot and get high-converting social carousels generated instantly.</p>
             </a>
-            <a className="sp rv" href="mailto:hello@swipera.io">
+            <a className="sp rv" href="mailto:hello@postpilot.app">
               <i className="fas fa-envelope"></i>
               <h3>Email us</h3>
-              <p>hello@swipera.io · we reply within a day during beta.</p>
+              <p>hello@postpilot.app · we reply within a day.</p>
             </a>
           </div>
         </section>
@@ -935,11 +920,11 @@ export default function SwiperaLanding() {
         <section className="final">
           <h2 className="h-display">Every swipe, a follow.</h2>
           <p className="lede">Paste your text. Carousel done.</p>
-          <a className="btn solid big mag" href="/studio?lang=en#try">
-            <i className="fas fa-wand-magic-sparkles"></i> Try with my text
+          <a className="btn solid big mag" href="/signup">
+            <i className="fas fa-wand-magic-sparkles"></i> Get Started Free
           </a>
           <p className="mono" style={{ margin: 0, opacity: 0.7 }}>
-            Free in beta · no sign-up · small logo only
+            AI carousel automation & multi-platform publishing
           </p>
         </section>
       </main>
@@ -948,9 +933,9 @@ export default function SwiperaLanding() {
       <footer className="foot">
         <div className="foot-top">
           <div>
-            <span className="mark small">S</span> <b>Swipera</b>{" "}
+            <span className="mark small">P</span> <b>PostPilot</b>{" "}
             <span className="mono">
-              · AI carousel maker · Every swipe, a follow.
+              · AI carousel automation engine · Every swipe, a follow.
             </span>
           </div>
           <nav>
@@ -959,11 +944,9 @@ export default function SwiperaLanding() {
             <a href="#styles">Styles</a>
             <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
-            <a href="mailto:hello@swipera.io">Contact</a>
-            <a href="/studio?lang=en">Studio</a>
-            <a href="/?lang=ko" className="mono">
-              한국어
-            </a>
+            <a href="/login">Sign In</a>
+            <a href="/signup">Sign Up</a>
+            <a href="/feed">Feed App</a>
           </nav>
         </div>
         <div className="foot-biz" id="foot-biz">
