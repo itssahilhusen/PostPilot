@@ -1,14 +1,5 @@
-"use client";
-
-import React, { Suspense } from "react";
-import { SwiperaStudioWorkspace } from "@/components/workspace/SwiperaStudioWorkspace";
-
-export const dynamic = "force-dynamic";
+import { redirect } from "next/navigation";
 
 export default function SchedulePage() {
-  return (
-    <Suspense fallback={<div className="h-screen w-full bg-[var(--bg)]" />}>
-      <SwiperaStudioWorkspace initialTab="calendar" />
-    </Suspense>
-  );
+  redirect("/calendar");
 }

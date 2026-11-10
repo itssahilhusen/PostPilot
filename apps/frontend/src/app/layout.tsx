@@ -66,7 +66,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${GeistSans.variable} ${GeistMono.variable} ${instrumentSerif.variable} ${playfairDisplay.variable} scroll-smooth font-sans`}
+      className={`dark ${inter.variable} ${GeistSans.variable} ${GeistMono.variable} ${instrumentSerif.variable} ${playfairDisplay.variable} scroll-smooth font-sans`}
       suppressHydrationWarning
     >
       <head>
@@ -74,13 +74,12 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600;700&display=swap" />
         <link rel="stylesheet" href="/swipera/templates.css" />
-        <link rel="stylesheet" href="/swipera/studio-style.css" />
         <script async src="/swipera/templates.js" />
       </head>
-      <body className="font-sans antialiased selection:bg-primary selection:text-primary-foreground min-h-screen">
+      <body className="font-sans antialiased selection:bg-primary selection:text-primary-foreground min-h-screen bg-black text-white">
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var p=new URLSearchParams(window.location.search);var t=p.get("theme")||localStorage.getItem("reerts-theme")||localStorage.getItem("swipera-theme");if(t==="light"){document.documentElement.classList.remove("dark");}else{document.documentElement.classList.add("dark");}}catch(e){}})();`,
+            __html: `(function(){try{document.documentElement.classList.add("dark");document.body.classList.add("dark");}catch(e){}})();`,
           }}
         />
         <AuthProvider>{children}</AuthProvider>

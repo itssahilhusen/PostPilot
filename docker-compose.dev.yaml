@@ -1,13 +1,13 @@
-# Development Docker Compose Stack for Reerts
+# Development Docker Compose Stack for PostPilot
 services:
   reerts-postgres:
     image: postgres:16-alpine
     container_name: reerts-postgres
     restart: always
     environment:
-      POSTGRES_USER: reerts
-      POSTGRES_PASSWORD: reerts_password
-      POSTGRES_DB: reerts_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: reerts
     ports:
       - "5432:5432"
     volumes:
@@ -44,4 +44,3 @@ volumes:
 networks:
   reerts-network:
     driver: bridge
-

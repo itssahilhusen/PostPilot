@@ -1,8 +1,5 @@
-"use client";
-
-import React from "react";
-import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { redirect } from "next/navigation";
 
 export default function PipelinesPage() {
-  return <WorkspaceShell initialView="pipelines" />;
+  redirect("/raw");
 }

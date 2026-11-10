@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 export interface WorkspaceTab {
@@ -314,8 +315,11 @@ export function TopHeader({
               <div className="border-t border-white/10 mt-1 pt-1">
                 <button
                   type="button"
-                  onClick={() => setProfileDropdownOpen(false)}
-                  className="w-full text-left px-3 py-2 hover:bg-white/10 text-red-400 transition-colors"
+                  onClick={() => {
+                    setProfileDropdownOpen(false);
+                    signOut({ callbackUrl: "/login" });
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-white/10 text-red-400 transition-colors cursor-pointer"
                 >
                   Sign Out
                 </button>

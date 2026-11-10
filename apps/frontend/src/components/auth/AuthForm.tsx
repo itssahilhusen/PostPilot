@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Loader2, X } from "lucide-react";
-import { ReertsLogo } from "@/components/ReertsLogo";
+import { Loader2, X, Sparkles, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface AuthFormProps {
   initialMode?: "signin" | "signup";
@@ -18,13 +16,19 @@ interface AuthFormProps {
 export function AuthForm({ initialMode = "signin", onClose, isModal = false }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/conversations";
+  
+  // Clean & normalize callbackUrl so it never redirects to legacy white studio/conversations
+  const rawCallback = searchParams?.get("callbackUrl");
+  const callbackUrl = (!rawCallback || rawCallback.includes("/studio") || rawCallback.includes("/conversations") || rawCallback.includes("/pipelines"))
+    ? "/feed"
+    : rawCallback;
 
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -32,8 +36,14 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
     if (onClose) {
       onClose();
     } else {
-      router.push("/conversations");
+      router.push("/feed");
     }
+  };
+
+  const handleDemoFill = () => {
+    setEmail("alex@example.com");
+    setPassword("password123");
+    toast.info("Demo credentials inserted");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,7 +97,7 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
         return;
       }
 
-      toast.success("Welcome back! Redirecting...");
+      toast.success("Welcome back! Redirecting to feed...");
       router.push(callbackUrl);
       router.refresh();
     } catch (err: any) {
@@ -107,39 +117,50 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
   };
 
   const handleForgotPassword = () => {
-    toast.info("Password reset instructions will be sent to your email.");
+    toast.info("Password reset instructions sent to your email.");
   };
 
-  const modalContent = (
-    <div 
+  const formContent = (
+    <div
       onClick={(e) => e.stopPropagation()}
-      className="relative w-full max-w-[420px] rounded-2xl bg-white dark:bg-[#111113] text-gray-900 dark:text-neutral-100 shadow-2xl dark:shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-gray-100 dark:border-neutral-800 p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-200 select-none transition-colors"
+      className="relative w-full max-w-[420px] rounded-2xl p-6 sm:p-8 select-none text-white transition-all shadow-2xl"
+      style={{
+        background: "rgba(14, 18, 19, 0.85)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+        boxShadow: "0 25px 60px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+      }}
     >
-      {/* Top-Right Close Button */}
-      <button
-        id="auth-modal-close-button"
-        type="button"
-        onClick={handleClose}
-        className="absolute top-4 right-4 size-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-neutral-800 active:bg-gray-200 dark:active:bg-neutral-700 transition-all cursor-pointer z-20 group"
-        aria-label="Close"
-        title="Close this page"
-      >
-        <X className="w-4 h-4 text-gray-500 dark:text-neutral-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
-      </button>
+      {/* Top Close Button (if modal) */}
+      {isModal && (
+        <button
+          id="auth-modal-close-button"
+          type="button"
+          onClick={handleClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 active:bg-white/15 transition-all cursor-pointer z-20 group"
+          aria-label="Close"
+          title="Close this modal"
+        >
+          <X className="w-4 h-4 text-neutral-400 group-hover:text-white transition-colors" />
+        </button>
+      )}
 
-      {/* Modal Header with Reerts App Logo */}
-      <div className="mb-5">
-        <div className="flex items-center gap-2.5">
-          <ReertsLogo variant="symbol" size={24} iconClassName="size-6 object-contain shrink-0" />
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-            {mode === "signup" ? "Sign up" : "Sign in / Sign up"}
+      {/* Brand Header */}
+      <div className="mb-6 flex flex-col items-center text-center">
+        <div className="w-12 h-12 rounded-2xl bg-brand-lime flex items-center justify-center shadow-lg shadow-brand-lime/20 mb-3 ring-4 ring-brand-lime/20">
+          <span className="text-black font-extrabold text-2xl tracking-tighter">P</span>
+        </div>
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-xl font-bold tracking-tight text-white">
+            {mode === "signup" ? "Create PostPilot Account" : "Sign in to PostPilot"}
           </h2>
         </div>
-        {mode === "signup" && (
-          <p className="text-xs text-gray-500 dark:text-neutral-400 mt-1 font-normal">
-            Sign up with email or Google.
-          </p>
-        )}
+        <p className="text-xs text-neutral-400 max-w-[280px]">
+          {mode === "signup"
+            ? "Start automating viral social carousels and multi-channel workflows"
+            : "Access your AI research flywheel, design studio, and feed"}
+        </p>
       </div>
 
       {/* Form */}
@@ -147,7 +168,7 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
         {/* Full Name Field (Sign Up Mode) */}
         {mode === "signup" && (
           <div>
-            <label className="text-xs font-semibold text-gray-800 dark:text-neutral-200 block mb-1">
+            <label className="text-xs font-semibold text-neutral-300 block mb-1">
               Full Name
             </label>
             <input
@@ -155,8 +176,8 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name"
-              className="w-full h-10 px-3.5 rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-gray-900 dark:focus:border-neutral-300 focus:ring-1 focus:ring-gray-900 dark:focus:ring-neutral-300 transition-all"
+              placeholder="Elena Rostova"
+              className="w-full h-10 px-3.5 rounded-xl border border-white/12 bg-white/5 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-lime focus:ring-1 focus:ring-brand-lime transition-all"
               required={mode === "signup"}
             />
           </div>
@@ -164,16 +185,16 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
 
         {/* Email Field */}
         <div>
-          <label className="text-xs font-semibold text-gray-800 dark:text-neutral-200 block mb-1">
-            Email
+          <label className="text-xs font-semibold text-neutral-300 block mb-1">
+            Work Email
           </label>
           <input
             id="auth-email-input"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-            className="w-full h-10 px-3.5 rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-gray-900 dark:focus:border-neutral-300 focus:ring-1 focus:ring-gray-900 dark:focus:ring-neutral-300 transition-all"
+            placeholder="elena@halcyon.co"
+            className="w-full h-10 px-3.5 rounded-xl border border-white/12 bg-white/5 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-lime focus:ring-1 focus:ring-brand-lime transition-all"
             required
           />
         </div>
@@ -181,31 +202,41 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
         {/* Password Field */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-semibold text-gray-800 dark:text-neutral-200 block">
+            <label className="text-xs font-semibold text-neutral-300 block">
               Password
             </label>
             {mode === "signin" && (
               <button
                 type="button"
                 onClick={handleForgotPassword}
-                className="text-xs text-gray-500 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white hover:underline transition-colors"
+                className="text-xs text-neutral-400 hover:text-brand-lime transition-colors"
               >
                 Forgot password?
               </button>
             )}
           </div>
-          <input
-            id="auth-password-input"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            className="w-full h-10 px-3.5 rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-gray-900 dark:focus:border-neutral-300 focus:ring-1 focus:ring-gray-900 dark:focus:ring-neutral-300 transition-all"
-            required
-          />
+          <div className="relative">
+            <input
+              id="auth-password-input"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••••••"
+              className="w-full h-10 pl-3.5 pr-10 rounded-xl border border-white/12 bg-white/5 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-lime focus:ring-1 focus:ring-brand-lime transition-all"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors"
+              aria-label="Toggle password visibility"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
           {mode === "signup" && (
-            <p className="text-[11px] text-gray-400 dark:text-neutral-500 mt-1">
-              Password must be at least 6 characters.
+            <p className="text-[11px] text-neutral-400 mt-1">
+              Minimum 6 characters.
             </p>
           )}
         </div>
@@ -213,7 +244,7 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
         {/* Confirm Password Field (Sign Up Mode) */}
         {mode === "signup" && (
           <div>
-            <label className="text-xs font-semibold text-gray-800 dark:text-neutral-200 block mb-1">
+            <label className="text-xs font-semibold text-neutral-300 block mb-1">
               Confirm Password
             </label>
             <input
@@ -221,8 +252,8 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter your password"
-              className="w-full h-10 px-3.5 rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-gray-900 dark:focus:border-neutral-300 focus:ring-1 focus:ring-gray-900 dark:focus:ring-neutral-300 transition-all"
+              placeholder="••••••••••••"
+              className="w-full h-10 px-3.5 rounded-xl border border-white/12 bg-white/5 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-lime focus:ring-1 focus:ring-brand-lime transition-all"
               required={mode === "signup"}
             />
           </div>
@@ -233,39 +264,37 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
           id="auth-submit-button"
           type="submit"
           disabled={loading || googleLoading}
-          className="w-full h-10 rounded-lg bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 dark:active:bg-neutral-200 text-white dark:text-neutral-950 font-medium dark:font-semibold text-sm transition-all shadow-xs flex items-center justify-center cursor-pointer disabled:opacity-60 !mt-4"
+          className="w-full h-11 rounded-xl bg-brand-lime hover:bg-brand-limeHover active:scale-99 text-black font-bold text-sm transition-all shadow-md shadow-brand-lime/25 flex items-center justify-center cursor-pointer disabled:opacity-60 !mt-5 tracking-tight"
         >
           {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-white dark:text-neutral-950" />
+            <Loader2 className="w-4 h-4 animate-spin text-black" />
           ) : mode === "signup" ? (
             "Create Account"
           ) : (
-            "Sign in"
+            "Sign In"
           )}
         </button>
       </form>
 
-      {/* Toggle link between Sign in and Sign up (In Sign In mode, above OR) */}
+      {/* 1-Click Demo Fill for easy testing */}
       {mode === "signin" && (
-        <div className="text-xs text-gray-600 dark:text-neutral-400 text-center mt-3">
-          Don&apos;t have an account?{" "}
-          <button
-            type="button"
-            onClick={() => setMode("signup")}
-            className="font-bold text-gray-900 dark:text-white hover:underline transition-colors cursor-pointer"
-          >
-            Sign up
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleDemoFill}
+          className="w-full mt-2 py-1.5 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-brand-lime flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+        >
+          <Sparkles className="w-3 h-3 text-brand-lime" />
+          <span>Quick Demo Fill (alex@example.com)</span>
+        </button>
       )}
 
       {/* Divider OR */}
       <div className="relative flex items-center justify-center w-full my-4">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200 dark:border-neutral-800" />
+          <div className="w-full border-t border-white/10" />
         </div>
-        <div className="relative bg-white dark:bg-[#111113] px-3 text-[10px] text-gray-400 dark:text-neutral-500 font-semibold tracking-wider uppercase transition-colors">
-          or
+        <div className="relative px-3 text-[10px] text-neutral-400 font-semibold tracking-wider uppercase" style={{ background: "rgba(14, 18, 19, 0.95)" }}>
+          or continue with
         </div>
       </div>
 
@@ -274,17 +303,16 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
         type="button"
         onClick={handleGoogleSignIn}
         disabled={googleLoading || loading}
-        className="w-full h-10 rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/80 hover:bg-gray-50 dark:hover:bg-neutral-800 active:bg-gray-100 dark:active:bg-neutral-700 flex items-center justify-center gap-2.5 text-sm font-medium text-gray-700 dark:text-neutral-200 shadow-2xs transition-colors cursor-pointer disabled:opacity-60"
+        className="w-full h-10 rounded-xl border border-white/12 bg-white/5 hover:bg-white/10 active:bg-white/15 flex items-center justify-center gap-2.5 text-xs font-semibold text-neutral-200 transition-colors cursor-pointer disabled:opacity-60"
       >
         {googleLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-gray-400 shrink-0" />
+          <Loader2 className="w-4 h-4 animate-spin text-neutral-400 shrink-0" />
         ) : (
           <svg
             width={16}
             height={16}
             viewBox="0 0 24 24"
             className="w-4 h-4 shrink-0"
-            style={{ width: "16px", height: "16px" }}
           >
             <path
               fill="#4285F4"
@@ -307,47 +335,59 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
         <span>{mode === "signup" ? "Sign up with Google" : "Sign in with Google"}</span>
       </button>
 
-      {/* Toggle link in Sign Up mode (Below Google button matching screenshot) */}
-      {mode === "signup" && (
-        <div className="text-xs text-gray-600 dark:text-neutral-400 text-center mt-4">
-          Already have an account?{" "}
-          <button
-            type="button"
-            onClick={() => setMode("signin")}
-            className="font-bold text-gray-900 dark:text-white hover:underline transition-colors cursor-pointer"
-          >
-            Sign in
-          </button>
-        </div>
-      )}
+      {/* Switch between Sign In and Sign Up */}
+      <div className="text-xs text-neutral-400 text-center mt-5">
+        {mode === "signin" ? (
+          <>
+            Don&apos;t have an account?{" "}
+            <button
+              type="button"
+              onClick={() => setMode("signup")}
+              className="font-bold text-brand-lime hover:underline transition-colors cursor-pointer ml-1"
+            >
+              Create Account
+            </button>
+          </>
+        ) : (
+          <>
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={() => setMode("signin")}
+              className="font-bold text-brand-lime hover:underline transition-colors cursor-pointer ml-1"
+            >
+              Sign In
+            </button>
+          </>
+        )}
+      </div>
 
-      {/* Terms Disclaimer in Sign In mode */}
-      {mode === "signin" && (
-        <p className="text-[10px] text-gray-400 dark:text-neutral-500 text-center mt-4">
-          By proceeding, you agree to{" "}
-          <span className="underline cursor-pointer hover:text-gray-600 dark:hover:text-neutral-300">Terms of Service</span> and{" "}
-          <span className="underline cursor-pointer hover:text-gray-600 dark:hover:text-neutral-300">Privacy Policy</span>.
-        </p>
-      )}
+      {/* Footer Disclaimer */}
+      <div className="flex items-center justify-center gap-1.5 text-[10px] text-neutral-500 mt-5 pt-3 border-t border-white/5">
+        <ShieldCheck className="w-3.5 h-3.5 text-neutral-400" />
+        <span>Protected with 256-bit AES encryption</span>
+      </div>
     </div>
   );
 
   if (isModal) {
-    return modalContent;
+    return formContent;
   }
 
   return (
-    <div 
+    <div
       onClick={(e) => {
-        if (e.target === e.currentTarget) {
+        if (e.target === e.currentTarget && onClose) {
           handleClose();
         }
       }}
-      className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-neutral-900/60 dark:bg-black/75 backdrop-blur-xs font-sans select-none antialiased cursor-pointer"
+      className="relative min-h-screen w-full flex items-center justify-center p-4 bg-black font-sans select-none antialiased"
+      style={{
+        background: "radial-gradient(ellipse at 50% 30%, rgba(197, 245, 42, 0.05) 0%, rgba(0, 0, 0, 0.95) 70%, #000000 100%)",
+      }}
     >
-      <div className="fixed inset-0 pointer-events-none -z-10 bg-neutral-800/80 dark:bg-neutral-950/90 backdrop-blur-sm" />
-      <div className="cursor-default w-full max-w-[420px] flex items-center justify-center">
-        {modalContent}
+      <div className="w-full max-w-[420px] flex items-center justify-center z-10">
+        {formContent}
       </div>
     </div>
   );

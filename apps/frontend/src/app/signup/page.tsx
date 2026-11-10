@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
 import { Metadata } from "next";
-import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { AuthForm } from "@/components/auth/AuthForm";
 
 export const metadata: Metadata = {
   title: "Create Account — PostPilot",
@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-background" />}>
-      <WorkspaceShell initialView="pipelines" showAuthModal={true} authModalMode="signup" />
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <AuthForm initialMode="signup" />
     </Suspense>
   );
 }

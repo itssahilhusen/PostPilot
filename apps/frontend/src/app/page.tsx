@@ -1,13 +1,5 @@
-import React from "react";
-import SwiperaLanding from "@/components/swipera/SwiperaLanding";
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  return (
-    <>
-      <link rel="stylesheet" href="/swipera/landing.css" />
-      <link rel="stylesheet" href="/swipera/templates.css" />
-      <SwiperaLanding />
-    </>
-  );
+export default function HomePage() {
+  redirect("/feed");
 }
-

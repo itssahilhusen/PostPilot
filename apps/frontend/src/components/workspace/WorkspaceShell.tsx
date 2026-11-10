@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
-import { SwiperaStudioWorkspace, StudioTab } from "./SwiperaStudioWorkspace";
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AuthForm } from "@/components/auth/AuthForm";
 
 export type WorkspaceTab =
   | "studio"
@@ -43,36 +44,44 @@ export function WorkspaceShell({
   initialView = "studio",
   children,
   showAuthModal = false,
-  authModalMode = "signup",
+  authModalMode = "signin",
 }: WorkspaceShellProps) {
-  let mappedTab: StudioTab = "create";
+  const router = useRouter();
 
-  if (initialView === "pipelines") {
-    mappedTab = "pipeline";
-  } else if (initialView === "ideas") {
-    mappedTab = "ideas";
-  } else if (initialView === "calendar" || initialView === "schedule") {
-    mappedTab = "calendar";
-  } else if (initialView === "create" || initialView === "studio") {
-    mappedTab = "create";
-  } else if (initialView === "templates" || initialView === "images" || initialView === "image" || initialView === "carousel" || initialView === "design") {
-    mappedTab = "templates";
-  } else if (initialView === "brand") {
-    mappedTab = "create";
-  } else if (initialView === "caption") {
-    mappedTab = "caption";
-  } else {
-    mappedTab = "create";
+  useEffect(() => {
+    if (!showAuthModal) {
+      if (initialView === "pipelines" || initialView === "videos") {
+        router.replace("/raw");
+      } else if (initialView === "calendar" || initialView === "schedule" || initialView === "publish") {
+        router.replace("/calendar");
+      } else if (initialView === "media-library" || initialView === "images") {
+        router.replace("/media");
+      } else if (initialView === "brand" || initialView === "personas") {
+        router.replace("/style");
+      } else if (initialView === "studio" || initialView === "carousel") {
+        router.replace("/result");
+      } else {
+        router.replace("/feed");
+      }
+    }
+  }, [initialView, showAuthModal, router]);
+
+  if (showAuthModal) {
+    return (
+      <div className="min-h-screen w-full bg-black flex items-center justify-center p-4">
+        <AuthForm initialMode={authModalMode} />
+      </div>
+    );
   }
 
   return (
-    <React.Suspense fallback={<div className="h-screen w-full bg-[var(--bg,#0a0a0c)]" />}>
-      <SwiperaStudioWorkspace
-        initialTab={mappedTab}
-        showAuthModal={showAuthModal}
-        authModalMode={authModalMode}
-      />
-    </React.Suspense>
+    <div className="h-screen w-full bg-black flex items-center justify-center text-neutral-400">
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 border-2 border-brand-lime border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs">Loading PostPilot...</span>
+      </div>
+    </div>
   );
 }
+
 export default WorkspaceShell;

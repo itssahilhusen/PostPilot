@@ -1,9 +1,5 @@
-"use client";
-
-import React from "react";
-import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { redirect } from "next/navigation";
 
 export default function ImagesPage() {
-  return <WorkspaceShell initialView="images" />;
+  redirect("/media");
 }
-

@@ -1,8 +1,5 @@
-"use client";
-
-import React from "react";
-import { RaycallDashboard } from "@/components/dashboard/RaycallDashboard";
+import { redirect } from "next/navigation";
 
 export default function DashboardPage() {
-  return <RaycallDashboard />;
+  redirect("/feed");
 }

@@ -29,7 +29,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root, .theme-light {
+:root, .theme-light, .dark {
   --font-geist-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-geist-mono: 'Geist Mono', monospace;
   --font-instrument-serif: 'Instrument Serif', 'Playfair Display', Georgia, serif;
@@ -39,64 +39,64 @@
   --header-height: 3.5rem;
   --push-sheet-width: min(560px, 100vw);
 
-  /* Exact Light Mode Tokens */
-  --background: #ffffff;
-  --workspace: #ffffff;
-  --surface: #ffffff;
-  --surface-secondary: #f7f7f7;
-  --surface-hover: #f2f2f2;
-  --foreground: #111111;
-  --muted: #666666;
-  --muted-foreground: #666666;
-  --border: #e7e7e7;
-  --divider: #e7e7e7;
+  /* Exact Obsidian Dark Mode Tokens: Pure Black #000000, Neutral Black Surface #0A0A0A */
+  --background: #000000;
+  --workspace: #000000;
+  --surface: #0a0a0a;
+  --surface-secondary: #111111;
+  --surface-hover: #161616;
+  --foreground: #ffffff;
+  --muted: #a3a3a3;
+  --muted-foreground: #a3a3a3;
+  --border: #262626;
+  --divider: #202020;
   --accent: #c5f52a;
   --accent-hover: #b4e320;
   --accent-foreground: #000000;
-  --accent-muted: rgba(197, 245, 42, 0.15);
+  --accent-muted: rgba(197, 245, 42, 0.12);
 
-  --card: #ffffff;
-  --card-secondary: #f7f7f7;
-  --card-foreground: #111111;
-  --popover: #ffffff;
-  --popover-foreground: #111111;
+  --card: #0a0a0a;
+  --card-secondary: #111111;
+  --card-foreground: #ffffff;
+  --popover: #0a0a0a;
+  --popover-foreground: #ffffff;
   --primary: #c5f52a;
   --primary-foreground: #000000;
-  --secondary: #f7f7f7;
-  --secondary-foreground: #111111;
-  --destructive: #e40014;
-  --input: #e7e7e7;
+  --secondary: #111111;
+  --secondary-foreground: #ffffff;
+  --destructive: #ff6568;
+  --input: #262626;
   --ring: #c5f52a;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #111111;
-  --sidebar-border: #e7e7e7;
+  --sidebar: #000000;
+  --sidebar-foreground: #ffffff;
+  --sidebar-border: #262626;
 
   /* Workspace compatibility variables */
-  --bg: #ffffff;
-  --fg: #111111;
-  --panel: #ffffff;
-  --line: #e7e7e7;
-  --hover: #f7f7f7;
+  --bg: #000000;
+  --fg: #ffffff;
+  --panel: #0a0a0a;
+  --line: #262626;
+  --hover: #161616;
   --brand: #c5f52a;
   --brand-ink: #000000;
 
-  --background-rgb: 255 255 255;
-  --foreground-rgb: 17 17 17;
-  --card-rgb: 255 255 255;
-  --card-foreground-rgb: 17 17 17;
+  --background-rgb: 0 0 0;
+  --foreground-rgb: 255 255 255;
+  --card-rgb: 10 10 10;
+  --card-foreground-rgb: 255 255 255;
   --primary-rgb: 197 245 42;
   --primary-foreground-rgb: 0 0 0;
-  --secondary-rgb: 247 247 247;
-  --secondary-foreground-rgb: 17 17 17;
-  --muted-rgb: 102 102 102;
-  --muted-foreground-rgb: 102 102 102;
+  --secondary-rgb: 17 17 17;
+  --secondary-foreground-rgb: 255 255 255;
+  --muted-rgb: 163 163 163;
+  --muted-foreground-rgb: 163 163 163;
   --accent-rgb: 197 245 42;
   --accent-foreground-rgb: 0 0 0;
-  --destructive-rgb: 228 0 20;
-  --border-rgb: 231 231 231;
+  --destructive-rgb: 255 101 104;
+  --border-rgb: 38 38 38;
   --ring-rgb: 197 245 42;
-  --sidebar-rgb: 255 255 255;
-  --sidebar-foreground-rgb: 17 17 17;
+  --sidebar-rgb: 0 0 0;
+  --sidebar-foreground-rgb: 255 255 255;
 
   --tone-yellow: #fbf3e1;
   --tone-yellow-strong: #f6dba1;
