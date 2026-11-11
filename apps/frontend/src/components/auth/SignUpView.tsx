@@ -9,6 +9,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PostPilotLogo } from "@/components/design-system/PostPilotLogo";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -162,11 +163,9 @@ export function SignUpView() {
         >
           {/* Center Auth Content Box */}
           <div className="w-full max-w-[380px] mx-auto flex-1 flex flex-col justify-center py-4">
-            {/* App/Brand Icon */}
+            {/* App/Brand Icon: PostPilot Green Box with Black Double-PP */}
             <div className="flex justify-center mb-6">
-              <div className="w-11 h-11 bg-[#c5f52a] rounded-xl flex items-center justify-center text-black font-extrabold text-2xl shadow-lg transition-transform hover:scale-105 duration-200 select-none">
-                A
-              </div>
+              <PostPilotLogo variant="badge" size={44} className="shadow-lg" />
             </div>
 
             {/* Headings */}

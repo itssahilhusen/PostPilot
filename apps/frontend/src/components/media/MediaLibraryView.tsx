@@ -9,6 +9,7 @@ import {
 } from "@/lib/mock/media-data";
 import { useToast } from "@/components/design-system/Toast";
 import { cn } from "@/lib/utils";
+import { MediaFileCard } from "./MediaFileCard";
 
 export function MediaLibraryView() {
   const { toast } = useToast();
@@ -112,16 +113,20 @@ export function MediaLibraryView() {
     const newItem: MediaItem = {
       id: `media-${Date.now()}`,
       title: uploadTitle.trim(),
-      fileName: `${uploadTitle.trim().replace(/\s+/g, "_")}.png`,
+      fileName: `${uploadTitle.trim().replace(/\s+/g, "_")}.${uploadType === "carousels" ? "pdf" : uploadType === "videos" ? "mp4" : uploadType === "audio" ? "mp3" : "png"}`,
+      fileExt: uploadType === "carousels" ? "pdf" : uploadType === "videos" ? "mp4" : uploadType === "audio" ? "mp3" : "png",
       resolution: "1080 × 1080 px",
       fileSize: "3.2 MB",
-      badgeFormat: "HD PNG",
+      badgeFormat: uploadType === "carousels" ? "PDF CAROUSEL" : uploadType === "videos" ? "4K REEL" : "HD PNG",
       type: uploadType,
       channelId: uploadChannelId,
       channelName: channels.find((c) => c.id === uploadChannelId)?.name || "Instagram",
       placement: uploadPlacement,
       tag: "Ready",
       tagColor: "neutral",
+      uploaderName: "Jane Cooper",
+      uploaderAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80",
+      formattedDate: "Just now",
       imageUrl:
         "https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=800&q=80",
       altText: uploadTitle.trim(),
@@ -205,6 +210,281 @@ export function MediaLibraryView() {
     }
   };
 
+  // Render Dog-Ear Folded Document Icon (Matching user reference image exactly)
+  const renderDocumentIcon = (ext?: MediaItem["fileExt"]) => {
+    switch (ext) {
+      case "pdf":
+        return (
+          <div className="relative shrink-0 select-none drop-shadow-sm">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M0 4C0 1.79086 1.79086 0 4 0H23L36 13V40C36 42.2091 34.2091 44 32 44H4C1.79086 44 0 42.2091 0 40V4Z"
+                fill="#DC2626"
+              />
+              <path
+                d="M23 0V11C23 12.1046 23.8954 13 25 13H36L23 0Z"
+                fill="#EF4444"
+                opacity="0.95"
+              />
+              <text
+                x="18"
+                y="30"
+                fill="#FFFFFF"
+                fontSize="10"
+                fontWeight="900"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+                letterSpacing="0.03em"
+              >
+                PDF
+              </text>
+            </svg>
+          </div>
+        );
+
+      case "docx":
+        return (
+          <div className="relative shrink-0 select-none drop-shadow-sm">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M0 4C0 1.79086 1.79086 0 4 0H23L36 13V40C36 42.2091 34.2091 44 32 44H4C1.79086 44 0 42.2091 0 40V4Z"
+                fill="#FFFFFF"
+                stroke="#CBD5E1"
+                strokeWidth="1"
+              />
+              <path
+                d="M23 0V11C23 12.1046 23.8954 13 25 13H36L23 0Z"
+                fill="#E2E8F0"
+                stroke="#CBD5E1"
+                strokeWidth="0.8"
+              />
+              <rect x="5.5" y="18" width="13" height="15" rx="2" fill="#2563EB" />
+              <text
+                x="12"
+                y="29.5"
+                fill="#FFFFFF"
+                fontSize="9"
+                fontWeight="900"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+              >
+                W
+              </text>
+              <line x1="22" y1="20" x2="30" y2="20" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="22" y1="24.5" x2="30" y2="24.5" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="22" y1="29" x2="30" y2="29" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        );
+
+      case "xlsx":
+        return (
+          <div className="relative shrink-0 select-none drop-shadow-sm">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M0 4C0 1.79086 1.79086 0 4 0H23L36 13V40C36 42.2091 34.2091 44 32 44H4C1.79086 44 0 42.2091 0 40V4Z"
+                fill="#FFFFFF"
+                stroke="#CBD5E1"
+                strokeWidth="1"
+              />
+              <path
+                d="M23 0V11C23 12.1046 23.8954 13 25 13H36L23 0Z"
+                fill="#E2E8F0"
+                stroke="#CBD5E1"
+                strokeWidth="0.8"
+              />
+              <rect x="5.5" y="18" width="13" height="15" rx="2" fill="#059669" />
+              <text
+                x="12"
+                y="29.5"
+                fill="#FFFFFF"
+                fontSize="9"
+                fontWeight="900"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+              >
+                X
+              </text>
+              <line x1="22" y1="20" x2="30" y2="20" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="22" y1="24.5" x2="30" y2="24.5" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="22" y1="29" x2="30" y2="29" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        );
+
+      case "ai":
+        return (
+          <div className="relative shrink-0 select-none drop-shadow-sm">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M0 4C0 1.79086 1.79086 0 4 0H23L36 13V40C36 42.2091 34.2091 44 32 44H4C1.79086 44 0 42.2091 0 40V4Z"
+                fill="#1C1105"
+                stroke="#D97706"
+                strokeWidth="1.2"
+              />
+              <path
+                d="M23 0V11C23 12.1046 23.8954 13 25 13H36L23 0Z"
+                fill="#D97706"
+                opacity="0.9"
+              />
+              <text
+                x="18"
+                y="26"
+                fill="#F59E0B"
+                fontSize="13"
+                fontWeight="900"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+              >
+                Ai
+              </text>
+              <text
+                x="18"
+                y="37"
+                fill="#FFFFFF"
+                fontSize="7"
+                fontWeight="700"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+                letterSpacing="0.05em"
+              >
+                AI
+              </text>
+            </svg>
+          </div>
+        );
+
+      case "psd":
+        return (
+          <div className="relative shrink-0 select-none drop-shadow-sm">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M0 4C0 1.79086 1.79086 0 4 0H23L36 13V40C36 42.2091 34.2091 44 32 44H4C1.79086 44 0 42.2091 0 40V4Z"
+                fill="#031628"
+                stroke="#0284C7"
+                strokeWidth="1.2"
+              />
+              <path
+                d="M23 0V11C23 12.1046 23.8954 13 25 13H36L23 0Z"
+                fill="#0284C7"
+                opacity="0.9"
+              />
+              <text
+                x="18"
+                y="26"
+                fill="#38BDF8"
+                fontSize="13"
+                fontWeight="900"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+              >
+                Ps
+              </text>
+              <text
+                x="18"
+                y="37"
+                fill="#FFFFFF"
+                fontSize="7"
+                fontWeight="700"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+                letterSpacing="0.05em"
+              >
+                PSD
+              </text>
+            </svg>
+          </div>
+        );
+
+      case "mp4":
+        return (
+          <div className="relative shrink-0 select-none drop-shadow-sm">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M0 4C0 1.79086 1.79086 0 4 0H23L36 13V40C36 42.2091 34.2091 44 32 44H4C1.79086 44 0 42.2091 0 40V4Z"
+                fill="#6D28D9"
+              />
+              <path
+                d="M23 0V11C23 12.1046 23.8954 13 25 13H36L23 0Z"
+                fill="#8B5CF6"
+                opacity="0.9"
+              />
+              <text
+                x="18"
+                y="30"
+                fill="#FFFFFF"
+                fontSize="9"
+                fontWeight="900"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+                letterSpacing="0.02em"
+              >
+                MP4
+              </text>
+            </svg>
+          </div>
+        );
+
+      case "mp3":
+        return (
+          <div className="relative shrink-0 select-none drop-shadow-sm">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M0 4C0 1.79086 1.79086 0 4 0H23L36 13V40C36 42.2091 34.2091 44 32 44H4C1.79086 44 0 42.2091 0 40V4Z"
+                fill="#BE185D"
+              />
+              <path
+                d="M23 0V11C23 12.1046 23.8954 13 25 13H36L23 0Z"
+                fill="#EC4899"
+                opacity="0.9"
+              />
+              <text
+                x="18"
+                y="30"
+                fill="#FFFFFF"
+                fontSize="9"
+                fontWeight="900"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+                letterSpacing="0.02em"
+              >
+                MP3
+              </text>
+            </svg>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="relative shrink-0 select-none drop-shadow-sm">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M0 4C0 1.79086 1.79086 0 4 0H23L36 13V40C36 42.2091 34.2091 44 32 44H4C1.79086 44 0 42.2091 0 40V4Z"
+                fill="#0F766E"
+              />
+              <path
+                d="M23 0V11C23 12.1046 23.8954 13 25 13H36L23 0Z"
+                fill="#14B8A6"
+                opacity="0.9"
+              />
+              <text
+                x="18"
+                y="30"
+                fill="#FFFFFF"
+                fontSize="9"
+                fontWeight="900"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                textAnchor="middle"
+                letterSpacing="0.02em"
+              >
+                PNG
+              </text>
+            </svg>
+          </div>
+        );
+    }
+  };
+
   return (
     <>
       {/* Mobile Channel Drawer Backdrop */}
@@ -215,479 +495,460 @@ export function MediaLibraryView() {
         />
       )}
 
-      {/* Main Workspace Wrapper (Matching Stitch) */}
-      <main
-        className="flex-1 h-full flex flex-col bg-[#0D0F10] border border-white/10 rounded-2xl overflow-hidden select-none"
-        data-purpose="media-workspace"
-        style={{
-          background: "rgba(13, 16, 17, 0.85)",
-          backdropFilter: "blur(24px) saturate(180%)",
-          WebkitBackdropFilter: "blur(24px) saturate(180%)",
-          border: "1px solid rgba(255, 255, 255, 0.07)",
-          boxShadow:
-            "rgba(0, 0, 0, 0.9) 0px 20px 48px -16px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
-        }}
-      >
-        <div className="flex-1 w-full h-full flex overflow-hidden">
-          {/* Middle Layout: Channels Selector Column (w-[320px]) */}
-          <aside
-            className={cn(
-              "w-[320px] h-full border-r border-white/10 flex-col justify-between shrink-0 bg-[#0E1012] overflow-hidden transition-all",
-              showMobileChannels
-                ? "fixed inset-y-3 left-3 z-40 w-80 flex rounded-2xl shadow-2xl border border-white/20 bg-neutral-950/95 backdrop-blur-2xl"
-                : "hidden lg:flex"
-            )}
-            style={{
-              background: "rgba(14, 17, 19, 0.85)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              borderRight: "1px solid rgba(255, 255, 255, 0.07)",
-            }}
-          >
-            {/* Mobile Header Close */}
-            {showMobileChannels && (
-              <div className="flex items-center justify-between p-3 border-b border-white/10 lg:hidden">
-                <h3 className="text-xs font-bold text-white">Select Channel</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowMobileChannels(false)}
-                  className="text-neutral-400 hover:text-white text-xs p-1"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-
-            {/* Channels Cards Scrollable Grid / List */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {channels.map((ch) => {
-                const isActive = ch.active || selectedChannelId === ch.id;
-                return (
-                  <div
-                    key={ch.id}
-                    onClick={() => handleSelectChannel(ch)}
-                    className={cn(
-                      "p-3 rounded-xl flex flex-col items-center text-center cursor-pointer transition-all relative",
-                      isActive
-                        ? "bg-[#16191B] border-2 border-brand-lime"
-                        : "bg-[#141718] border border-white/10 hover:border-white/20"
-                    )}
-                    style={
-                      isActive
-                        ? {
-                            background: "rgba(22, 26, 28, 0.85)",
-                            boxShadow: "rgba(197, 245, 42, 0.12) 0px 0px 18px",
-                          }
-                        : undefined
-                    }
-                  >
-                    {isActive && (
-                      <div className="absolute top-2 right-2 flex items-center space-x-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand-lime animate-pulse" />
-                        <span className="text-[9px] text-brand-lime font-medium uppercase tracking-wider">
-                          Active
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Channel Circle Icon */}
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center text-white mb-2 shadow-md",
-                        ch.brandColor ? "" : "bg-black border border-white/20"
-                      )}
-                      style={{
-                        background: ch.gradient || ch.brandColor,
-                      }}
-                    >
-                      {renderChannelIcon(ch.iconType)}
-                    </div>
-
-                    <h4 className={cn("text-xs font-bold text-white", isActive ? "font-bold" : "font-semibold")}>
-                      {ch.name}
-                    </h4>
-                    <p className="text-[10px] text-white/40 mt-0.5">{ch.subtitle}</p>
-
-                    {/* Add Media Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setUploadChannelId(ch.id);
-                        setShowUploadModal(true);
-                      }}
-                      className={cn(
-                        "mt-2 px-3 py-1 rounded-lg text-[10px] font-semibold transition-all w-full flex items-center justify-center space-x-1 border border-dashed",
-                        isActive
-                          ? "bg-brand-lime/10 border-brand-lime text-brand-lime hover:bg-brand-lime/20"
-                          : "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-white/20 hover:border-brand-lime"
-                      )}
-                    >
-                      <span className="font-bold">+</span>
-                      <span>Add Media</span>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Quick channel upload trigger button at bottom */}
-            <div className="p-3 border-t border-white/10 shrink-0 bg-[#0E1012]">
+      {/* ============================================================== */}
+      {/* MAIN MEDIA WORKSPACE: SEPARATE SOCIAL SIDEBAR + TOPBAR + GRID */}
+      {/* ============================================================== */}
+      <main className="flex-1 h-full flex flex-row gap-3 overflow-hidden select-none relative">
+        {/* ============================================================== */}
+        {/* 1. SEPARATE SOCIAL CHANNELS SIDEBAR (Similar to Workflow)      */}
+        {/* ============================================================== */}
+        <aside
+          className={cn(
+            "w-[300px] h-full rounded-2xl flex flex-col justify-between shrink-0 overflow-hidden transition-all z-20",
+            showMobileChannels
+              ? "fixed inset-y-3 left-3 z-40 w-80 flex rounded-2xl shadow-2xl border border-white/20 bg-neutral-950/95 backdrop-blur-2xl"
+              : "hidden lg:flex"
+          )}
+          style={{
+            background: "rgba(14, 18, 19, 0.75)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            boxShadow:
+              "rgba(0, 0, 0, 0.5) 0px 10px 30px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
+          }}
+        >
+          {/* Mobile Header Close */}
+          {showMobileChannels && (
+            <div className="flex items-center justify-between p-3 border-b border-white/10 lg:hidden">
+              <h3 className="text-xs font-bold text-white">Select Channel</h3>
               <button
                 type="button"
-                onClick={() => setShowUploadModal(true)}
-                className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-xl border border-brand-lime/30 bg-brand-lime/10 hover:bg-brand-lime/20 text-brand-lime text-xs font-semibold transition-all"
+                onClick={() => setShowMobileChannels(false)}
+                className="text-neutral-400 hover:text-white text-xs p-1"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                </svg>
-                <span>+ Upload to Channel</span>
+                ✕
               </button>
             </div>
-          </aside>
+          )}
 
-          {/* Main Layout: Asset & Media Library Workspace */}
-          <div className="flex-1 h-full flex flex-col overflow-hidden bg-[#090A0B]">
-            {/* Top Toolbar */}
-            <section
-              className="w-full px-5 py-3 border-b border-white/10 flex flex-col gap-2.5 shrink-0 bg-[#0E1113]"
-              style={{
-                background: "rgba(16, 20, 22, 0.7)",
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
-              }}
-            >
-              {/* Filter Tabs & Sort Row */}
-              <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
-                <div className="flex items-center space-x-1.5 text-xs overflow-x-auto max-w-full pb-0.5">
-                  {/* Mobile channel drawer toggle pill */}
-                  <button
-                    type="button"
-                    onClick={() => setShowMobileChannels(!showMobileChannels)}
-                    className="lg:hidden px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/5 border border-white/10 text-neutral-300 hover:text-white flex items-center space-x-1"
-                  >
-                    <span>Channels</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand-lime" />
-                  </button>
+          {/* Channels Cards Scrollable Grid / List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 hide-scrollbar">
+            {channels.map((ch) => {
+              const isActive = ch.active || selectedChannelId === ch.id;
+              return (
+                <div
+                  key={ch.id}
+                  onClick={() => handleSelectChannel(ch)}
+                  className={cn(
+                    "p-3 rounded-xl flex flex-col items-center text-center cursor-pointer transition-all relative",
+                    isActive
+                      ? "bg-[#16191B] border-2 border-brand-lime"
+                      : "bg-[#141718] border border-white/10 hover:border-white/20"
+                  )}
+                  style={
+                    isActive
+                      ? {
+                        background: "rgba(22, 26, 28, 0.85)",
+                        boxShadow: "rgba(197, 245, 42, 0.12) 0px 0px 18px",
+                      }
+                      : {
+                        background: "rgba(255, 255, 255, 0.04)",
+                        border: "1px solid rgba(255, 255, 255, 0.07)",
+                      }
+                  }
+                >
+                  {isActive && (
+                    <div className="absolute top-2 right-2 flex items-center space-x-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand-lime animate-pulse" />
+                      <span className="text-[9px] text-brand-lime font-medium uppercase tracking-wider">
+                        Active
+                      </span>
+                    </div>
+                  )}
 
-                  {/* All Media */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("all")}
+                  {/* Channel Circle Icon */}
+                  <div
                     className={cn(
-                      "px-3 py-1 rounded-lg font-medium transition-colors flex items-center space-x-1.5",
-                      activeTab === "all"
-                        ? "bg-white/10 text-white border border-white/10 shadow-xs"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
+                      "w-10 h-10 rounded-full flex items-center justify-center text-white mb-2 shadow-md",
+                      ch.brandColor ? "" : "bg-black border border-white/20"
+                    )}
+                    style={{
+                      background: ch.gradient || ch.brandColor,
+                    }}
+                  >
+                    {renderChannelIcon(ch.iconType)}
+                  </div>
+
+                  <h4 className={cn("text-xs font-bold text-white", isActive ? "font-bold" : "font-semibold")}>
+                    {ch.name}
+                  </h4>
+                  <p className="text-[10px] text-white/40 mt-0.5">{ch.subtitle}</p>
+
+                  {/* Add Media Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUploadChannelId(ch.id);
+                      setShowUploadModal(true);
+                    }}
+                    className={cn(
+                      "mt-2 px-3 py-1 rounded-lg text-[10px] font-semibold transition-all w-full flex items-center justify-center space-x-1 border border-dashed",
+                      isActive
+                        ? "bg-brand-lime/10 border-brand-lime text-brand-lime hover:bg-brand-lime/20"
+                        : "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-white/20 hover:border-brand-lime"
                     )}
                   >
-                    <span>All Media</span>
-                    <span className="bg-brand-lime text-black font-bold px-1.5 py-0.2 rounded-full text-[10px]">
-                      184
-                    </span>
-                  </button>
-
-                  {/* Images */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("images")}
-                    className={cn(
-                      "px-3 py-1 rounded-lg transition-colors flex items-center space-x-1",
-                      activeTab === "images"
-                        ? "bg-white/10 text-white border border-white/10"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
-                    )}
-                  >
-                    <span>Images</span>
-                    <span className="text-white/40 text-[11px]">(124)</span>
-                  </button>
-
-                  {/* Videos & Reels */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("videos")}
-                    className={cn(
-                      "px-3 py-1 rounded-lg transition-colors flex items-center space-x-1",
-                      activeTab === "videos"
-                        ? "bg-white/10 text-white border border-white/10"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
-                    )}
-                  >
-                    <span>Videos &amp; Reels</span>
-                    <span className="text-white/40 text-[11px]">(38)</span>
-                  </button>
-
-                  {/* Carousels */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("carousels")}
-                    className={cn(
-                      "px-3 py-1 rounded-lg transition-colors flex items-center space-x-1",
-                      activeTab === "carousels"
-                        ? "bg-white/10 text-white border border-white/10"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
-                    )}
-                  >
-                    <span>Carousels</span>
-                    <span className="text-white/40 text-[11px]">(16)</span>
-                  </button>
-
-                  {/* Audio & SFX */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("audio")}
-                    className={cn(
-                      "px-3 py-1 rounded-lg transition-colors flex items-center space-x-1",
-                      activeTab === "audio"
-                        ? "bg-white/10 text-white border border-white/10"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
-                    )}
-                  >
-                    <span>Audio &amp; SFX</span>
-                    <span className="text-white/40 text-[11px]">(6)</span>
+                    <span className="font-bold">+</span>
+                    <span>Add Media</span>
                   </button>
                 </div>
+              );
+            })}
+          </div>
 
-                {/* Right: Sort Dropdown & Upload Action */}
-                <div className="flex items-center space-x-2 relative">
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsSortOpen(!isSortOpen)}
-                      className="flex items-center space-x-1 bg-[#16191B] border border-white/10 hover:border-white/20 px-2.5 py-1 rounded-lg text-xs text-white/70 transition-colors"
-                    >
-                      <span className="text-white/40">Sort:</span>
-                      <span className="text-white font-medium">
-                        {sortOption === "recent"
-                          ? "Recently Added"
-                          : sortOption === "size"
+          {/* Quick channel upload trigger button at bottom */}
+          <div className="p-3 border-t border-white/10 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowUploadModal(true)}
+              className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-xl border border-brand-lime/40 bg-brand-lime/10 hover:bg-brand-lime/20 text-brand-lime text-xs font-semibold transition-all shadow-sm cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+              </svg>
+              <span>+ Upload to Channel</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* ============================================================== */}
+        {/* 2. RIGHT MAIN MEDIA CONTENT AREA (Topbar + Media Grid)         */}
+        {/* ============================================================== */}
+        <div className="flex-1 h-full flex flex-col gap-3 overflow-hidden">
+          {/* Separate Floating Topbar (Topbar UI Style) */}
+          <div
+            className="h-14 px-4 flex items-center justify-between shrink-0 select-none rounded-2xl"
+            style={{
+              background: "rgba(14, 18, 19, 0.75)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "16px",
+              boxShadow:
+                "rgba(0, 0, 0, 0.4) 0px 10px 30px, rgba(255, 255, 255, 0.12) 0px 1px 0px inset",
+            }}
+          >
+            {/* Filter Tabs & Sort Row */}
+            <div className="flex items-center justify-between w-full gap-2">
+              <div className="flex items-center space-x-1.5 text-xs overflow-x-auto max-w-full pb-0.5 shrink min-w-0">
+                {/* Mobile channel drawer toggle pill */}
+                <button
+                  type="button"
+                  onClick={() => setShowMobileChannels(!showMobileChannels)}
+                  className="lg:hidden px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/5 border border-white/10 text-neutral-300 hover:text-white flex items-center space-x-1"
+                >
+                  <span>Channels</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-lime" />
+                </button>
+
+                {/* All Media */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("all")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl font-medium transition-colors flex items-center space-x-1.5 text-xs cursor-pointer",
+                    activeTab === "all"
+                      ? "text-white shadow-sm"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
+                  )}
+                  style={
+                    activeTab === "all"
+                      ? {
+                        background: "rgba(255, 255, 255, 0.12)",
+                        backdropFilter: "blur(16px)",
+                        WebkitBackdropFilter: "blur(16px)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        boxShadow: "rgba(255, 255, 255, 0.15) 0px 1px 1px inset",
+                      }
+                      : {
+                        background: "rgba(255, 255, 255, 0.06)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        border: "1px solid rgba(255, 255, 255, 0.12)",
+                      }
+                  }
+                >
+                  <span>All Media</span>
+                  <span className="bg-brand-lime text-black font-bold px-1.5 py-0.2 rounded-full text-[10px]">
+                    134
+                  </span>
+                </button>
+
+                {/* Images */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("images")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl transition-colors flex items-center space-x-1 text-xs cursor-pointer",
+                    activeTab === "images"
+                      ? "text-white shadow-sm"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
+                  )}
+                  style={
+                    activeTab === "images"
+                      ? {
+                        background: "rgba(255, 255, 255, 0.12)",
+                        backdropFilter: "blur(16px)",
+                        WebkitBackdropFilter: "blur(16px)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        boxShadow: "rgba(255, 255, 255, 0.15) 0px 1px 1px inset",
+                      }
+                      : {
+                        background: "rgba(255, 255, 255, 0.06)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        border: "1px solid rgba(255, 255, 255, 0.12)",
+                      }
+                  }
+                >
+                  <span>Images</span>
+                  <span className="text-white/40 text-[11px]">(124)</span>
+                </button>
+
+                {/* Videos & Reels */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("videos")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl transition-colors flex items-center space-x-1 text-xs cursor-pointer",
+                    activeTab === "videos"
+                      ? "text-white shadow-sm"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
+                  )}
+                  style={
+                    activeTab === "videos"
+                      ? {
+                        background: "rgba(255, 255, 255, 0.12)",
+                        backdropFilter: "blur(16px)",
+                        WebkitBackdropFilter: "blur(16px)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        boxShadow: "rgba(255, 255, 255, 0.15) 0px 1px 1px inset",
+                      }
+                      : {
+                        background: "rgba(255, 255, 255, 0.06)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        border: "1px solid rgba(255, 255, 255, 0.12)",
+                      }
+                  }
+                >
+                  <span>Videos &amp; Reels</span>
+                  <span className="text-white/40 text-[11px]">(38)</span>
+                </button>
+
+                {/* Carousels */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("carousels")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl transition-colors flex items-center space-x-1 text-xs cursor-pointer",
+                    activeTab === "carousels"
+                      ? "text-white shadow-sm"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
+                  )}
+                  style={
+                    activeTab === "carousels"
+                      ? {
+                        background: "rgba(255, 255, 255, 0.12)",
+                        backdropFilter: "blur(16px)",
+                        WebkitBackdropFilter: "blur(16px)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        boxShadow: "rgba(255, 255, 255, 0.15) 0px 1px 1px inset",
+                      }
+                      : {
+                        background: "rgba(255, 255, 255, 0.06)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        border: "1px solid rgba(255, 255, 255, 0.12)",
+                      }
+                  }
+                >
+                  <span>Carousels</span>
+                  <span className="text-white/40 text-[11px]">(16)</span>
+                </button>
+
+                {/* Audio & SFX */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("audio")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl transition-colors flex items-center space-x-1 text-xs cursor-pointer",
+                    activeTab === "audio"
+                      ? "text-white shadow-sm"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
+                  )}
+                  style={
+                    activeTab === "audio"
+                      ? {
+                        background: "rgba(255, 255, 255, 0.12)",
+                        backdropFilter: "blur(16px)",
+                        WebkitBackdropFilter: "blur(16px)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        boxShadow: "rgba(255, 255, 255, 0.15) 0px 1px 1px inset",
+                      }
+                      : {
+                        background: "rgba(255, 255, 255, 0.06)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        border: "1px solid rgba(255, 255, 255, 0.12)",
+                      }
+                  }
+                >
+                  <span>Audio &amp; SFX</span>
+                  <span className="text-white/40 text-[11px]">(8)</span>
+                </button>
+              </div>
+
+              {/* Right: Sort Dropdown & Add New Action (Matching Reference Image) */}
+              <div className="flex items-center space-x-2 relative shrink-0">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsSortOpen(!isSortOpen)}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs text-white/90 hover:text-white transition-colors cursor-pointer"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.08)",
+                      backdropFilter: "blur(8px)",
+                      WebkitBackdropFilter: "blur(8px)",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      boxShadow: "rgba(255, 255, 255, 0.08) 0px 1px 1px inset",
+                    }}
+                  >
+                    <span className="text-white/50">Sort:</span>
+                    <span className="text-white font-medium">
+                      {sortOption === "recent"
+                        ? "Recently Added"
+                        : sortOption === "size"
                           ? "Largest File"
                           : sortOption === "linked"
-                          ? "Most Linked"
-                          : "Alphabetical"}
-                      </span>
-                      <svg
-                        className={cn(
-                          "w-3.5 h-3.5 ml-0.5 text-white/40 transition-transform",
-                          isSortOpen ? "rotate-180" : ""
-                        )}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                      </svg>
-                    </button>
-
-                    {isSortOpen && (
-                      <div
-                        className="absolute right-0 top-full mt-1.5 w-44 py-1 z-30 rounded-xl overflow-hidden shadow-2xl border border-white/10"
-                        style={{
-                          background: "rgba(18, 20, 22, 0.95)",
-                          backdropFilter: "blur(20px)",
-                          WebkitBackdropFilter: "blur(20px)",
-                        }}
-                      >
-                        {[
-                          { key: "recent", label: "Recently Added" },
-                          { key: "size", label: "Largest File" },
-                          { key: "linked", label: "Most Linked" },
-                          { key: "name", label: "Alphabetical" },
-                        ].map((opt) => (
-                          <button
-                            key={opt.key}
-                            type="button"
-                            onClick={() => {
-                              setSortOption(opt.key as any);
-                              setIsSortOpen(false);
-                              addToast({
-                                title: "Sorted",
-                                description: `Ordered assets by ${opt.label}`,
-                                variant: "info",
-                              });
-                            }}
-                            className={cn(
-                              "w-full text-left px-3 py-1.5 text-xs transition-colors",
-                              sortOption === opt.key
-                                ? "bg-white/10 text-brand-lime font-medium"
-                                : "text-neutral-300 hover:bg-white/5 hover:text-white"
-                            )}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* High-fidelity Media Card Grid */}
-            <div className="flex-1 overflow-y-auto p-4 bg-[#090A0B]">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                {sortedItems.map((item) => {
-                  const isCardSelected = item.selected;
-
-                  return (
-                    <article
-                      key={item.id}
-                      onClick={() => setActiveModalItem(item)}
+                            ? "Most Linked"
+                            : "Alphabetical"}
+                    </span>
+                    <svg
                       className={cn(
-                        "group relative rounded-2xl overflow-hidden flex flex-col cursor-pointer transition-all bg-[#141718]",
-                        isCardSelected
-                          ? "border-2 border-brand-lime"
-                          : "border border-white/10 hover:border-white/20"
+                        "w-3.5 h-3.5 ml-0.5 text-white/40 transition-transform",
+                        isSortOpen ? "rotate-180" : ""
                       )}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      {/* Top-Left Select Checkbox */}
-                      {isCardSelected ? (
-                        <div
-                          onClick={(e) => handleToggleSelect(item.id, e)}
-                          className="absolute top-2.5 left-2.5 z-10 w-5 h-5 rounded bg-brand-lime flex items-center justify-center text-black font-bold shadow-md hover:scale-110 transition-transform"
-                          title="Deselect item"
+                      <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                    </svg>
+                  </button>
+
+                  {isSortOpen && (
+                    <div
+                      className="absolute right-0 top-full mt-1.5 w-44 py-1 z-30 rounded-xl overflow-hidden shadow-2xl border border-white/10"
+                      style={{
+                        background: "rgba(18, 20, 22, 0.95)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                      }}
+                    >
+                      {[
+                        { key: "recent", label: "Recently Added" },
+                        { key: "size", label: "Largest File" },
+                        { key: "linked", label: "Most Linked" },
+                        { key: "name", label: "Alphabetical" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => {
+                            setSortOption(opt.key as any);
+                            setIsSortOpen(false);
+                            addToast({
+                              title: "Sorted",
+                              description: `Ordered assets by ${opt.label}`,
+                              variant: "info",
+                            });
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-xs transition-colors cursor-pointer",
+                            sortOption === opt.key
+                              ? "bg-white/10 text-brand-lime font-medium"
+                              : "text-neutral-300 hover:bg-white/5 hover:text-white"
+                          )}
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              d="M5 13l4 4L19 7"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="3"
-                            />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={(e) => handleToggleSelect(item.id, e)}
-                          className="absolute top-2.5 left-2.5 z-10 w-5 h-5 rounded border border-white/30 bg-black/40 backdrop-blur-md opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity hover:border-brand-lime"
-                          title="Select item"
-                        />
-                      )}
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                      {/* Top-Right Badges */}
-                      <div className="absolute top-2.5 right-2.5 z-10 flex items-center space-x-1">
-                        <span className="bg-black/70 backdrop-blur-md text-[10px] font-mono text-white/90 px-2 py-0.5 rounded-full border border-white/10">
-                          {item.badgeFormat}
-                        </span>
-                        <span className="bg-black/70 backdrop-blur-md text-[10px] font-mono text-white/70 px-1.5 py-0.5 rounded-full border border-white/10">
-                          {item.fileSize}
-                        </span>
-                      </div>
-
-                      {/* Image Preview Container */}
-                      <div className="w-full h-44 bg-black overflow-hidden relative">
-                        <img
-                          alt={item.altText}
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                          src={item.imageUrl}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
-                      </div>
-
-                      {/* Card Content Footer */}
-                      <div className="p-3 bg-[#111415] flex flex-col justify-between flex-1">
-                        <div className="flex items-start justify-between">
-                          <div className="truncate pr-2">
-                            <h4 className="text-xs font-semibold text-white truncate">
-                              {item.fileName}
-                            </h4>
-                            <p className="text-[11px] text-white/40 mt-0.5">
-                              {item.resolution} • {item.placement}
-                            </p>
-                          </div>
-
-                          {/* 3-dots Context Menu Button */}
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenCardMenuId(openCardMenuId === item.id ? null : item.id);
-                              }}
-                              className="text-white/40 hover:text-white p-1 rounded hover:bg-white/5 transition-colors"
-                              title="More options"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path
-                                  d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                />
-                              </svg>
-                            </button>
-
-                            {openCardMenuId === item.id && (
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-full mt-1 w-36 py-1 z-30 rounded-xl overflow-hidden shadow-2xl border border-white/10"
-                                style={{
-                                  background: "rgba(18, 20, 22, 0.95)",
-                                  backdropFilter: "blur(20px)",
-                                  WebkitBackdropFilter: "blur(20px)",
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveModalItem(item);
-                                    setOpenCardMenuId(null);
-                                  }}
-                                  className="w-full text-left px-3 py-1.5 text-xs text-neutral-300 hover:bg-white/10 hover:text-white transition-colors"
-                                >
-                                  View Details
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    navigator.clipboard?.writeText(item.imageUrl);
-                                    addToast({
-                                      title: "URL Copied",
-                                      description: "Asset URL copied to clipboard",
-                                      variant: "info",
-                                    });
-                                    setOpenCardMenuId(null);
-                                  }}
-                                  className="w-full text-left px-3 py-1.5 text-xs text-neutral-300 hover:bg-white/10 hover:text-white transition-colors"
-                                >
-                                  Copy Image URL
-                                </button>
-                                <div className="border-t border-white/10 my-1" />
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteItem(item.id)}
-                                  className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
-                                >
-                                  Delete Asset
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Bottom Tag Row */}
-                        <div className="mt-2.5 flex items-center justify-between text-[10px]">
-                          <span
-                            className={cn(
-                              "px-2 py-0.5 rounded-full font-medium border",
-                              item.tagColor === "lime"
-                                ? "text-brand-lime bg-brand-lime/10 border-brand-lime/20"
-                                : item.tagColor === "purple"
-                                ? "text-purple-400 bg-purple-500/10 border-purple-500/20"
-                                : item.tagColor === "amber"
-                                ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
-                                : "text-white/50 bg-white/5 border-white/10"
-                            )}
-                          >
-                            {item.tag}
-                          </span>
-                          <span className="text-white/40">{item.placement}</span>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
+                {/* Add New Button (Matching reference topbar) */}
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-brand-lime hover:bg-brand-limeHover text-black transition-all shadow-sm cursor-pointer"
+                  title="Upload New Content Asset"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+                  </svg>
+                  <span>Add New</span>
+                </button>
               </div>
+            </div>
+          </div>
+
+          {/* Separate Floating Media Cards Grid (Matching User Reference Image UI in Dark Mode) */}
+          <div
+            className="flex-1 overflow-y-auto p-4 rounded-2xl relative"
+            style={{
+              background: "rgba(14, 18, 19, 0.75)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "16px",
+              boxShadow:
+                "rgba(0, 0, 0, 0.4) 0px 10px 30px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
+            }}
+          >
+            {/* Separate Floating Media Cards Grid (Matching User Reference Image UI in Dark Mode) */}
+            <div
+              className="grid gap-4"
+              style={{
+                gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))",
+              }}
+            >
+              {sortedItems.map((item) => (
+                <MediaFileCard
+                  key={item.id}
+                  item={item}
+                  isSelected={!!item.selected}
+                  isMenuOpen={openCardMenuId === item.id}
+                  onSelectToggle={(e) => handleToggleSelect(item.id, e)}
+                  onOpenModal={(modalItem) => setActiveModalItem(modalItem)}
+                  onToggleMenu={() =>
+                    setOpenCardMenuId(openCardMenuId === item.id ? null : item.id)
+                  }
+                  onCloseMenu={() => setOpenCardMenuId(null)}
+                  onDeleteItem={handleDeleteItem}
+                  onCopyUrl={(url) => {
+                    navigator.clipboard?.writeText(url);
+                    addToast({
+                      title: "URL Copied",
+                      description: "Asset URL copied to clipboard",
+                      variant: "info",
+                    });
+                  }}
+                />
+              ))}
             </div>
           </div>
         </div>

@@ -11,6 +11,7 @@ export type NavTabId =
   | "feed"
   | "style"
   | "create"
+  | "result"
   | "raw"
   | "video"
   | "caption"
@@ -47,7 +48,7 @@ export function Sidebar({
   const isFeed = activeTab === "feed" || pathname === "/feed" || pathname === "/ideas";
   const isPipeline = activeTab === "pipeline" || activeTab === "workflow" || pathname === "/workflow" || pathname === "/pipelines";
   const isStyle = activeTab === "style" || pathname === "/style";
-  const isCreate = activeTab === "create" || pathname === "/result";
+  const isCreate = activeTab === "create" || activeTab === "result" || pathname === "/result";
   const isVideo = activeTab === "raw" || activeTab === "video" || pathname === "/raw" || pathname === "/videos";
   const isMedia = activeTab === "media" || activeTab === "caption" || pathname === "/media" || pathname === "/media-library";
   const isCalendar = activeTab === "calendar" || pathname === "/calendar";
@@ -150,7 +151,7 @@ export function Sidebar({
           </svg>
         </Link>
 
-        {/* 4. Create */}
+        {/* 4. Result Studio */}
         <Link
           href="/result"
           className={cn(
@@ -159,7 +160,7 @@ export function Sidebar({
               ? "bg-brand-lime text-black"
               : "text-neutral-400 hover:text-white hover:bg-neutral-900/60"
           )}
-          title="Create"
+          title="Result Studio"
         >
           <svg
             className="w-5 h-5"
@@ -170,9 +171,9 @@ export function Sidebar({
             strokeWidth="2"
             viewBox="0 0 24 24"
           >
-            <rect height="18" rx="2" ry="2" width="18" x="3" y="3" />
-            <line x1="12" x2="12" y1="8" y2="16" />
-            <line x1="8" x2="16" y1="12" y2="12" />
+            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+            <polyline points="2 17 12 22 22 17" />
+            <polyline points="2 12 12 17 22 12" />
           </svg>
         </Link>
 
@@ -192,7 +193,7 @@ export function Sidebar({
           </svg>
         </Link>
 
-        {/* 6. Caption & Media Library */}
+        {/* 6. Media Library */}
         <Link
           href="/media"
           className={cn(
@@ -201,7 +202,7 @@ export function Sidebar({
               ? "bg-brand-lime text-black"
               : "text-neutral-400 hover:text-white hover:bg-neutral-900/60"
           )}
-          title="Caption & Media Library"
+          title="Media Library"
         >
           <svg
             className="w-5 h-5"
@@ -212,9 +213,9 @@ export function Sidebar({
             strokeWidth="2"
             viewBox="0 0 24 24"
           >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            <path d="M8 9h8" />
-            <path d="M8 13h5" />
+            <rect height="18" rx="2" ry="2" width="18" x="3" y="3" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
           </svg>
         </Link>
 

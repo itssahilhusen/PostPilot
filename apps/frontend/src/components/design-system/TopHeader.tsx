@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { PostPilotLogo } from "./PostPilotLogo";
 
 export interface WorkspaceTab {
   id: string;
@@ -103,14 +104,8 @@ export function TopHeader({
       <div className="flex items-center min-w-0">
         {/* Brand Logo centered exactly across w-14 matching the left rail */}
         <div className="w-14 shrink-0 flex items-center justify-center">
-          <Link
-            href="/feed"
-            className="w-10 h-10 rounded-xl bg-brand-lime flex items-center justify-center text-black font-extrabold text-xl cursor-pointer hover:bg-brand-limeHover transition-colors"
-            title="PostPilot Feed"
-          >
-            <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
-              <path d="M12 2L2 19.5h5.5l2-4h5l2 4H22L12 2zm-1 9.5l2-4 2 4h-4z" />
-            </svg>
+          <Link href="/feed" title="PostPilot Feed">
+            <PostPilotLogo variant="badge" size={40} />
           </Link>
         </div>
 

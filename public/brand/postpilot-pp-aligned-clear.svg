@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <!-- PostPilot Signature Brand Squircle (#C5F52A) -->
+  <rect width="100" height="100" rx="26" fill="#C5F52A" />
+  
+  <!-- Clear Aligned Twin "PP" (Both P's side-by-side, 100% instant legibility) -->
+  <g fill="none" stroke="#000000" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- P1 (Post): Stem from y=78 up to 22, Bowl curving to x=52 and returning to stem at y=48 -->
+    <path d="M 26 78 L 26 22 C 26 15, 45 15, 52 24 C 58 32, 54 48, 41 48 L 26 48" />
+    
+    <!-- Seamless fluid wave bridging P1 into P2 at the waist -->
+    <path d="M 38 48 C 45 48, 49 48, 56 48" />
+    
+    <!-- P2 (Pilot): Matching Stem from y=78 up to 22, Bowl curving to x=82 and returning at y=48 -->
+    <path d="M 56 78 L 56 22 C 56 15, 75 15, 82 24 C 88 32, 84 48, 71 48 L 56 48" />
+  </g>
+</svg>
+

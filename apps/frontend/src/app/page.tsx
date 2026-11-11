@@ -1,6 +1,6 @@
 import React from "react";
-import SwiperaLanding from "@/components/swipera/SwiperaLanding";
+import PostPilotLanding from "@/components/landing/PostPilotLanding";
 
 export default function HomePage() {
-  return <SwiperaLanding />;
+  return <PostPilotLanding />;
 }

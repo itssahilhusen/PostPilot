@@ -33,6 +33,33 @@ export function FeedView() {
   // Modals state
   const [isAddSourceOpen, setIsAddSourceOpen] = useState<boolean>(false);
   const [selectedStory, setSelectedStory] = useState<FeedStory | null>(null);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState<boolean>(false);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close category dropdown on outside click or Escape
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        categoryDropdownRef.current &&
+        !categoryDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+    if (isCategoryDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCategoryDropdownOpen]);
 
   // Global ⌘K keyboard shortcut for search
   useEffect(() => {
@@ -60,11 +87,18 @@ export function FeedView() {
       // Category filter
       if (activeCategory !== "All Feeds") {
         const queryLower = activeCategory.toLowerCase();
-        const matchesCategory =
-          story.category.toLowerCase().includes(queryLower) ||
-          (story.topicTag && story.topicTag.toLowerCase().includes(queryLower)) ||
-          story.title.toLowerCase().includes(queryLower) ||
-          story.description.toLowerCase().includes(queryLower);
+        // Support compound categories like "Tech & AI", "Luxury & Fragrance"
+        const terms = queryLower.includes("&")
+          ? queryLower.split("&").map((s) => s.trim().toLowerCase()).filter(Boolean)
+          : [queryLower];
+
+        const matchesCategory = terms.some(
+          (term) =>
+            story.category.toLowerCase().includes(term) ||
+            (story.topicTag && story.topicTag.toLowerCase().includes(term)) ||
+            story.title.toLowerCase().includes(term) ||
+            story.description.toLowerCase().includes(term)
+        );
         if (!matchesCategory) return false;
       }
 
@@ -162,31 +196,23 @@ export function FeedView() {
   };
 
   return (
-    <main
-      className="flex-1 bg-[#050505] border-[#1a1a1a] flex flex-col overflow-hidden relative select-none"
-      style={{
-        background: "rgba(14, 18, 19, 0.75)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        borderRadius: "20px",
-        boxShadow:
-          "rgba(0, 0, 0, 0.4) 0px 10px 30px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
-      }}
-    >
+    <main className="flex-1 flex flex-col gap-3 overflow-hidden relative select-none">
       {/* ============================================================== */}
-      {/* TOP TOOLBAR HEADER (Matched 100% to Stitch)                   */}
+      {/* 1. SEPARATE TOP ACTION & SEARCH BAR (Topbar UI Style)          */}
       {/* ============================================================== */}
       <div
-        className="border-b border-[#1f1f1f] flex flex-col px-5 py-3 bg-transparent shrink-0 gap-3"
+        className="h-14 px-4 flex items-center justify-between shrink-0 select-none rounded-2xl relative z-30"
         style={{
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          background: "rgba(14, 18, 19, 0.45)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
+          background: "rgba(14, 18, 19, 0.75)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: "16px",
+          boxShadow:
+            "rgba(0, 0, 0, 0.4) 0px 10px 30px, rgba(255, 255, 255, 0.12) 0px 1px 0px inset",
         }}
       >
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 w-full">
           {/* Left Tabs: All Stories vs Saved */}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
@@ -260,14 +286,143 @@ export function FeedView() {
             </button>
           </div>
 
-          {/* Center Search Input */}
-          <div className="flex items-center gap-3 flex-1 max-w-lg">
-            <SearchInput
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search ideas, headlines, keywords, or sources..."
-            />
+          {/* Center Search Input & Category Dropdown */}
+          <div className="flex items-center gap-2 flex-1 max-w-xl">
+            <div className="flex-1 min-w-[200px]">
+              <SearchInput
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search ideas, headlines, keywords, or sources..."
+              />
+            </div>
+
+            {/* Category Filter Dropdown */}
+            <div className="relative shrink-0" ref={categoryDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsCategoryDropdownOpen((prev) => !prev)}
+                className={cn(
+                  "h-9 px-3 rounded-xl text-xs font-medium flex items-center gap-2 transition-all cursor-pointer select-none",
+                  activeCategory !== "All Feeds"
+                    ? "text-brand-lime"
+                    : "text-white/90 hover:text-white"
+                )}
+                style={{
+                  background:
+                    activeCategory !== "All Feeds"
+                      ? "rgba(197, 245, 42, 0.12)"
+                      : "rgba(255, 255, 255, 0.08)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border:
+                    activeCategory !== "All Feeds"
+                      ? "1px solid rgba(197, 245, 42, 0.35)"
+                      : "1px solid rgba(255, 255, 255, 0.15)",
+                  boxShadow: "rgba(255, 255, 255, 0.08) 0px 1px 1px inset",
+                }}
+                aria-haspopup="listbox"
+                aria-expanded={isCategoryDropdownOpen}
+                title={`Filter Category: ${activeCategory}`}
+              >
+                <svg
+                  className={cn(
+                    "w-3.5 h-3.5 shrink-0",
+                    activeCategory !== "All Feeds"
+                      ? "text-brand-lime"
+                      : "text-neutral-400"
+                  )}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                >
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+
+                <span className="truncate max-w-[120px]">
+                  {activeCategory}
+                </span>
+
+                <svg
+                  className={cn(
+                    "w-3 h-3 text-neutral-400 transition-transform duration-200 shrink-0",
+                    isCategoryDropdownOpen && "rotate-180 text-white"
+                  )}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="m6 9 6 6 6-6"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu */}
+              {isCategoryDropdownOpen && (
+                <div
+                  className="absolute right-0 top-[calc(100%+6px)] w-52 py-1.5 z-50 rounded-xl overflow-hidden shadow-2xl border border-white/10 animate-in fade-in zoom-in-95 duration-100"
+                  style={{
+                    background: "rgba(18, 20, 22, 0.95)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    boxShadow:
+                      "0 16px 36px -4px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08)",
+                  }}
+                  role="listbox"
+                >
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-wider font-semibold text-neutral-400 border-b border-white/10 mb-1">
+                    Filter by Category
+                  </div>
+                  <div className="max-h-64 overflow-y-auto hide-scrollbar py-0.5">
+                    {CATEGORIES_LIST.map((cat) => {
+                      const isSelected = activeCategory === cat;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            setActiveCategory(cat);
+                            setIsCategoryDropdownOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-xs flex items-center justify-between transition-colors cursor-pointer",
+                            isSelected
+                              ? "bg-brand-lime/15 text-brand-lime font-medium"
+                              : "text-white/80 hover:text-white hover:bg-white/10"
+                          )}
+                          role="option"
+                          aria-selected={isSelected}
+                        >
+                          <span className="truncate">{cat}</span>
+                          {isSelected && (
+                            <svg
+                              className="w-3.5 h-3.5 text-brand-lime shrink-0 ml-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                d="m4.5 12.75 6 6 9-13.5"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Action Controls */}
@@ -470,47 +625,23 @@ export function FeedView() {
             </div>
           </div>
         </div>
-
-        {/* Bottom Horizontal Filter Pills Row */}
-        <div className="flex items-center justify-between gap-3 pt-1 border-t border-white/10">
-          <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5">
-            {CATEGORIES_LIST.map((cat) => {
-              const isActive = activeCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setActiveCategory(cat)}
-                  style={
-                    isActive
-                      ? undefined
-                      : {
-                          background: "rgba(255, 255, 255, 0.08)",
-                          backdropFilter: "blur(12px)",
-                          WebkitBackdropFilter: "blur(12px)",
-                          border: "1px solid rgba(255, 255, 255, 0.15)",
-                          boxShadow: "inset 0 1px 1px rgba(255, 255, 255, 0.08)",
-                        }
-                  }
-                  className={cn(
-                    "px-3 py-1 rounded-full text-[11px] shrink-0 transition-colors cursor-pointer",
-                    isActive
-                      ? "font-semibold bg-brand-lime text-black shadow-sm hover:bg-brand-limeHover"
-                      : "font-medium text-white/90 hover:text-white hover:bg-white/10"
-                  )}
-                >
-                  {cat}
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
 
       {/* ============================================================== */}
-      {/* STORY FEED: RESPONSIVE MULTI-COLUMN CARD GRID                 */}
+      {/* 2. SEPARATE STORY FEED CARD GRID                               */}
       {/* ============================================================== */}
-      <div className="flex-1 overflow-y-auto p-5 relative">
+      <div
+        className="flex-1 overflow-y-auto p-5 rounded-2xl relative"
+        style={{
+          background: "rgba(14, 18, 19, 0.75)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: "16px",
+          boxShadow:
+            "rgba(0, 0, 0, 0.4) 0px 10px 30px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
+        }}
+      >
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
