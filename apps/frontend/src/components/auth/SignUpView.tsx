@@ -5,18 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Plus_Jakarta_Sans } from "next/font/google";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { PostPilotLogo } from "@/components/design-system/PostPilotLogo";
-
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-plus-jakarta",
-  display: "swap",
-});
 
 const signUpSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -151,7 +143,7 @@ export function SignUpView() {
   return (
     <div className="w-full min-h-screen bg-[#0c1011] flex items-center justify-center">
       <main
-        className={`${plusJakartaSans.className} w-full max-w-[1440px] h-screen max-h-[1024px] bg-[#0c1011] overflow-hidden flex flex-col lg:flex-row relative select-none font-sans text-white m-0 p-0`}
+        className="w-full max-w-[1440px] h-screen max-h-[1024px] bg-[#0c1011] overflow-hidden flex flex-col lg:flex-row relative select-none font-sans text-white m-0 p-0"
         data-purpose="split-auth-container"
       >
         {/* ========================================================= */}
