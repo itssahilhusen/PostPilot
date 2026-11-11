@@ -21,6 +21,12 @@ export async function isDatabaseAvailable(timeoutMs?: number): Promise<boolean> 
   }
 
   const dbUrl = process.env.DATABASE_URL || "";
+  if (!dbUrl) return false;
+  // In production or when connecting to Neon cloud, let Prisma's native connection pool handle it
+  if (dbUrl.includes("neon.tech") || process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    return true;
+  }
+
   let host = "localhost";
   let port = 5432;
   try {

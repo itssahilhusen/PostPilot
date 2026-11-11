@@ -3,17 +3,15 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import type { Adapter } from "next-auth/adapters";
 import { findUserByEmail, createStoreUser } from "@/lib/auth-store";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as Adapter,
   secret: process.env.NEXTAUTH_SECRET || "reerts-nextauth-super-secret-jwt-key-2026",
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days ("Remember for 30 days")
   },
+  debug: process.env.NODE_ENV === "development",
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "google-client-id-demo",
@@ -120,51 +118,48 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account }) {
-      if (account?.provider === "google" && user?.id) {
-        try {
-          await prisma.account.deleteMany({
-            where: {
-              userId: user.id,
-              provider: "google",
-              providerAccountId: { startsWith: "google_" },
-            },
-          });
-        } catch (e) {}
-      }
       return true;
     },
     async jwt({ token, user, account }) {
       if (user) {
-        token.id = user.id;
+        token.id = user.id || token.sub || (user.email ? `user_${user.email}` : "user_default");
         token.role = (user as any).role || "OWNER";
         token.workspaceId = (user as any).workspaceId || "ws-default-1";
+        if (user.email) token.email = user.email;
+        if (user.name) token.name = user.name;
+        if (user.image) token.picture = user.image;
       }
 
-      // Ensure user has workspace linked in PostgreSQL
-      if (token.id) {
+      // Sync user with PostgreSQL if DB is available
+      if (token.email) {
         try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
+          let dbUser = await prisma.user.findUnique({
+            where: { email: token.email },
           });
+
+          if (!dbUser && (user || account)) {
+            const ws = await prisma.workspace.findFirst();
+            dbUser = await prisma.user.create({
+              data: {
+                name: token.name || token.email.split("@")[0],
+                email: token.email,
+                image: token.picture || (user as any)?.image,
+                role: "OWNER",
+                workspaceId: ws?.id ?? "ws-default-1",
+              },
+            });
+          }
+
           if (dbUser) {
-            if (!dbUser.workspaceId) {
-              const ws = await prisma.workspace.findFirst();
-              if (ws) {
-                await prisma.user.update({
-                  where: { id: dbUser.id },
-                  data: { workspaceId: ws.id },
-                });
-                token.workspaceId = ws.id;
-              }
-            } else {
-              token.workspaceId = dbUser.workspaceId;
-            }
+            token.id = dbUser.id;
+            token.role = dbUser.role || token.role;
+            if (dbUser.workspaceId) token.workspaceId = dbUser.workspaceId;
             if (dbUser.name) token.name = dbUser.name;
             if (dbUser.image) token.picture = dbUser.image;
-            if (dbUser.role) token.role = dbUser.role;
           }
         } catch (e) {
-          console.error("Error verifying user in DB jwt callback:", e);
+          // Gracefully continue with JWT session even if DB has cold start
+          console.warn("DB user sync notice in JWT callback:", e);
         }
       }
 
