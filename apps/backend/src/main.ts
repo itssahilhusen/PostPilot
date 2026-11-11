@@ -74,7 +74,7 @@ async function bootstrap() {
   // 11. Best Practice: Swagger / OpenAPI 3.0 Documentation at /docs
   setupSwagger(app);
 
-  const port = process.env.BACKEND_PORT || 3001;
+  const port = process.env.PORT || process.env.BACKEND_PORT || 3001;
   await app.listen(port);
 
   logger.log(`🚀 NestJS Backend running at: http://localhost:${port}`);
