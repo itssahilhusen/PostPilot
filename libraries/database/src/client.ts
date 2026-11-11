@@ -14,7 +14,7 @@ let isDbReachable: boolean | null = globalForPrisma.isDbReachable ?? null;
 let lastCheckTime: number = globalForPrisma.lastDbCheckTime ?? 0;
 const CHECK_INTERVAL = 30000; // 30s cache
 
-export async function isDatabaseAvailable(timeoutMs = 80): Promise<boolean> {
+export async function isDatabaseAvailable(timeoutMs?: number): Promise<boolean> {
   const now = Date.now();
   if (isDbReachable !== null && now - lastCheckTime < CHECK_INTERVAL) {
     return isDbReachable;
@@ -29,8 +29,10 @@ export async function isDatabaseAvailable(timeoutMs = 80): Promise<boolean> {
     port = parseInt(url.port || "5432", 10);
   } catch {}
 
+  const effectiveTimeout = timeoutMs ?? (host === "localhost" || host === "127.0.0.1" ? 80 : 3000);
+
   isDbReachable = await new Promise<boolean>((resolve) => {
-    const socket = net.createConnection({ port, host, timeout: timeoutMs }, () => {
+    const socket = net.createConnection({ port, host, timeout: effectiveTimeout }, () => {
       socket.destroy();
       resolve(true);
     });
@@ -61,7 +63,7 @@ export const prisma = new Proxy(rawPrisma, {
             return async (...args: any[]) => {
               const available = await isDatabaseAvailable();
               if (!available) {
-                throw new Error("Database offline at localhost:5432 (mock fallback active)");
+                throw new Error("Database connection unavailable (fallback active)");
               }
               return modelMethod.apply(modelTarget, args);
             };
@@ -75,7 +77,7 @@ export const prisma = new Proxy(rawPrisma, {
       return async (...args: any[]) => {
         const available = await isDatabaseAvailable();
         if (!available) {
-          throw new Error("Database offline at localhost:5432 (mock fallback active)");
+          throw new Error("Database connection unavailable (fallback active)");
         }
         return orig.apply(target, args);
       };

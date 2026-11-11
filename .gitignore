@@ -277,3 +277,4 @@ PERFORMANCE_*.md
 *_INVENTORY.md
 *.original.*
 !README.md
+.neon
