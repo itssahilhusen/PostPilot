@@ -28,11 +28,24 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
     cors: {
-      origin: [
-        process.env.FRONTEND_URL || "http://localhost:3000",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-      ],
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+        const allowedOrigins = [
+          process.env.FRONTEND_URL,
+          "http://localhost:3000",
+          "http://127.0.0.1:3000",
+        ].filter(Boolean);
+        if (
+          allowedOrigins.includes(origin) ||
+          origin.endsWith(".vercel.app") ||
+          origin.includes("localhost") ||
+          origin.includes("127.0.0.1")
+        ) {
+          return callback(null, true);
+        }
+        return callback(null, true); // Allow all web origins with credentials
+      },
       credentials: true,
       allowedHeaders: [
         "Content-Type",
@@ -75,10 +88,10 @@ async function bootstrap() {
   setupSwagger(app);
 
   const port = process.env.PORT || process.env.BACKEND_PORT || 3001;
-  await app.listen(port);
+  await app.listen(port, "0.0.0.0");
 
-  logger.log(`🚀 NestJS Backend running at: http://localhost:${port}`);
-  logger.log(`📚 Swagger documentation at: http://localhost:${port}/docs`);
+  logger.log(`🚀 NestJS Backend running at: http://0.0.0.0:${port}`);
+  logger.log(`📚 Swagger documentation at: http://0.0.0.0:${port}/docs`);
 }
 
 bootstrap().catch((err) => {

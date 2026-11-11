@@ -17,8 +17,10 @@
     "build": "pnpm db:generate && pnpm --filter @reerts/frontend run build",
     "build:all": "pnpm -r run build",
     "build:frontend": "pnpm --filter @reerts/frontend run build",
-    "build:backend": "pnpm --filter @reerts/backend run build",
+    "build:backend": "pnpm db:generate && pnpm --filter @reerts/backend run build",
     "build:orchestrator": "pnpm --filter @reerts/orchestrator run build",
+    "start": "pnpm --filter @reerts/backend run start",
+    "start:backend": "pnpm --filter @reerts/backend run start",
     "lint": "pnpm --filter @reerts/frontend run lint",
     "prisma-generate": "node -e \"try { require('child_process').execSync('prisma generate --schema=./libraries/database/prisma/schema.prisma', { stdio: 'inherit' }); } catch (e) { console.warn('Prisma generation notice:', e.message); }\"",
     "prisma-db-push": "prisma db push --schema=./libraries/database/prisma/schema.prisma",
@@ -53,6 +55,7 @@
     "react-hook-form": "^7.52.0",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.3.0",
+    "tsx": "^4.19.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
