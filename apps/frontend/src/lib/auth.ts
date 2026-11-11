@@ -17,6 +17,13 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "google-client-id-demo",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "google-client-secret-demo",
       allowDangerousEmailAccountLinking: true,
+      authorization: {
+        params: {
+          prompt: "select_account",
+          access_type: "offline",
+          response_type: "code",
+        },
+      },
     }),
     CredentialsProvider({
       name: "credentials",
