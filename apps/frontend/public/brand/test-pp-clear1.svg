@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <!-- PostPilot Signature Brand Squircle (#C5F52A) -->
+  <rect width="100" height="100" rx="26" fill="#C5F52A" />
+  
+  <!-- Clear Cursive Ligature "PP" (Unbroken fluid stroke, 100% clear Double-P) -->
+  <!-- P1 (Left): Stem at x=28, Bowl arches from y=20 to y=50 -->
+  <path d="M 28 80 L 28 22 C 28 22, 48 18, 56 30 C 62 38, 56 50, 44 50 L 28 50" 
+        fill="none" stroke="#000000" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Fluid connective wave transitioning P1 into P2 -->
+  <path d="M 44 50 C 50 50, 52 56, 56 62 L 56 80" 
+        fill="none" stroke="#000000" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- P2 (Right): Bowl arches from y=34 to y=64 -->
+  <path d="M 56 34 C 56 34, 76 30, 84 42 C 90 50, 84 64, 72 64 L 56 64" 
+        fill="none" stroke="#000000" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
+

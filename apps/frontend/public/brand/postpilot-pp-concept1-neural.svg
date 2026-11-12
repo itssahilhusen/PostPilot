@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <!-- PostPilot Signature Brand Squircle (#C5F52A) -->
+  <rect width="100" height="100" rx="26" fill="#C5F52A" />
+  
+  <!-- Continuous Neural "PP" Loop (Faithful Vector Evolution of User's Image 1) -->
+  <!-- Outer 'P' (Post) sweeping over the top + Inner 'P' (Pilot) looping at the base -->
+  <path d="M 57 84 
+           L 57 73 
+           C 67 73, 87 67, 87 47 
+           C 87 23, 71 15, 52 15 
+           C 31 15, 13 25, 13 44 
+           C 13 54, 19 62, 35 62 
+           C 43 62, 31 80, 39 80 
+           C 44 80, 47 70, 47 55 
+           C 47 38, 57 28, 69 28 
+           C 79 28, 81 37, 81 45 
+           C 81 53, 74 59, 60 59" 
+        fill="none" 
+        stroke="#000000" 
+        stroke-width="7" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+</svg>
+

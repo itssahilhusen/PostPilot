@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <defs>
+    <!-- Multi-stage ambient shadow for 3D elevation -->
+    <filter id="box-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#000000" flood-opacity="0.8" />
+    </filter>
+    
+    <!-- Matte surface bevel gradient in our exact app lime tokens -->
+    <linearGradient id="lime-surface" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D7FA42" />
+      <stop offset="100%" stop-color="#B2E01E" />
+    </linearGradient>
+
+    <!-- Bevel rim highlight -->
+    <linearGradient id="rim-bevel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EEFFA8" />
+      <stop offset="100%" stop-color="#8BB510" />
+    </linearGradient>
+  </defs>
+
+  <!-- Base Shadow / Rim Plate -->
+  <rect x="5" y="5" width="90" height="90" rx="26" fill="url(#rim-bevel)" filter="url(#box-shadow)" />
+  
+  <!-- Main Elevated Matte Squircle (#C5F52A gradient) -->
+  <rect x="7" y="6" width="86" height="86" rx="24" fill="url(#lime-surface)" />
+  
+  <!-- Subtle inset ambient glow -->
+  <rect x="7" y="6" width="86" height="86" rx="24" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.35" />
+
+  <!-- Debossed/Engraved Black "PP" Glyph -->
+  <g transform="translate(1, 0.5)">
+    <!-- Deboss bottom shadow highlight -->
+    <path d="M 58 84 L 58 74 C 68 74, 88 68, 88 47 C 88 23, 71 14, 51 14 C 30 14, 12 25, 12 45 C 12 55, 18 64, 34 64 C 42 64, 31 82, 39 82 C 44 82, 47 72, 47 57 C 47 38, 57 28, 69 28 C 79 28, 81 37, 81 45 C 81 53, 74 59, 60 59" 
+          fill="none" stroke="#EEFFA8" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />
+    
+    <!-- Core Solid Pitch Black Glyph -->
+    <path d="M 58 83 L 58 73 C 68 73, 88 67, 88 46 C 88 22, 71 13, 51 13 C 30 13, 12 24, 12 44 C 12 54, 18 63, 34 63 C 42 63, 31 81, 39 81 C 44 81, 47 71, 47 56 C 47 37, 57 27, 69 27 C 79 27, 81 36, 81 44 C 81 52, 74 58, 60 58" 
+          fill="none" stroke="#000000" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>
+

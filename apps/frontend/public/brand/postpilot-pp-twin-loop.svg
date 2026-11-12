@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <!-- PostPilot Signature Brand Squircle (#C5F52A) -->
+  <rect width="100" height="100" rx="26" fill="#C5F52A" />
+  
+  <!-- Modern Kinetic Twin-P Ribbon (Unbroken continuous flow) -->
+  <!-- Bold 9px stroke with optical balance -->
+  <!-- P1 (Post): Vertical anchor rising into first bowl -->
+  <path d="M 28 82 L 28 22 C 28 17, 46 16, 58 26 C 68 34, 62 48, 48 50" 
+        fill="none" 
+        stroke="#000000" 
+        stroke-width="9" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+  
+  <!-- P2 (Pilot): Seamless transition looping into second bowl & stem -->
+  <path d="M 48 50 C 58 48, 78 44, 80 58 C 82 72, 68 80, 54 80 L 54 48" 
+        fill="none" 
+        stroke="#000000" 
+        stroke-width="9" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+</svg>
+

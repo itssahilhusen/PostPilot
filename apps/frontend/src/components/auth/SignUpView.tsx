@@ -337,6 +337,7 @@ export function SignUpView() {
                 alt={currentSlide.alt}
                 fill
                 priority
+                unoptimized
                 className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none transition-opacity duration-300"
                 sizes="(min-width: 1024px) 50vw, 100vw"
               />

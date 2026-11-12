@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <defs>
+    <!-- Multi-stage ambient shadow for 3D elevation -->
+    <filter id="tactile-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#000000" flood-opacity="0.8" />
+    </filter>
+    
+    <!-- Matte surface bevel gradient in our exact app lime tokens -->
+    <linearGradient id="lime-bevel-3d" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D7FA42" />
+      <stop offset="100%" stop-color="#B2E01E" />
+    </linearGradient>
+
+    <!-- Bevel rim highlight -->
+    <linearGradient id="rim-bevel-3d" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EEFFA8" />
+      <stop offset="100%" stop-color="#8BB510" />
+    </linearGradient>
+  </defs>
+
+  <!-- Base Shadow / Rim Plate -->
+  <rect x="5" y="5" width="90" height="90" rx="26" fill="url(#rim-bevel-3d)" filter="url(#tactile-shadow)" />
+  
+  <!-- Main Elevated Matte Squircle (#C5F52A gradient) -->
+  <rect x="7" y="6" width="86" height="86" rx="24" fill="url(#lime-bevel-3d)" />
+  
+  <!-- Subtle inset ambient glow -->
+  <rect x="7" y="6" width="86" height="86" rx="24" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.35" />
+
+  <!-- Clear Bold Debossed "PP" Glyph -->
+  <g fill="#000000" transform="translate(0, 0.5)">
+    <!-- P1: Left Stem and Top Bowl -->
+    <path d="M 20 22 C 20 19, 23 17, 27 17 L 46 17 C 58 17, 67 24, 67 36 C 67 47, 58 53, 46 53 L 33 53 L 33 78 C 33 81, 30 83, 26.5 83 C 23 83, 20 81, 20 78 Z M 33 43 L 45 43 C 51 43, 55 39.5, 55 35 C 55 30.5, 51 27, 45 27 L 33 27 Z" />
+    <!-- P2: Right Stem and Secondary Bowl -->
+    <path d="M 48 38 C 48 35, 51 33, 55 33 L 74 33 C 86 33, 95 40, 95 52 C 95 63, 86 69, 74 69 L 61 69 L 61 78 C 61 81, 58 83, 54.5 83 C 51 83, 48 81, 48 78 Z M 61 59 L 73 59 C 79 59, 83 55.5, 83 51 C 83 46.5, 79 43, 73 43 L 61 43 Z" />
+    <!-- Ligature bridge -->
+    <path d="M 42 49 C 46 49, 49 47, 52 43 L 56 47 C 52 52, 47 54, 41 54 Z" />
+  </g>
+</svg>
+

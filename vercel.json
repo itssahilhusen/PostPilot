@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "pnpm db:generate && pnpm --filter @reerts/frontend run build",
+  "buildCommand": "node scripts/sync-public.js && pnpm db:generate && pnpm --filter @reerts/frontend run build",
   "outputDirectory": "apps/frontend/.next"
 }

@@ -265,7 +265,9 @@ test_*.js
 # Reports, Audits & Research Documentation
 docs/
 screenshots/
-scripts/
+!scripts/
+scripts/*
+!scripts/sync-public.js
 PERFORMANCE_*.md
 *_AUDIT.md
 *_REPORT.md
