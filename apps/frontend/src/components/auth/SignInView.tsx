@@ -122,9 +122,13 @@ export function SignInView() {
   const handleGoogleSignIn = async () => {
     try {
       setGoogleLoading(true);
-      await signIn("google", { callbackUrl });
-    } catch {
-      toast.error("Google authentication failed. Please try credentials login.");
+      const res = await signIn("google", { callbackUrl });
+      if (res?.error) {
+        toast.error(res.error || "Google authentication failed. Please try credentials login.");
+        setGoogleLoading(false);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Google authentication failed. Please try credentials login.");
       setGoogleLoading(false);
     }
   };

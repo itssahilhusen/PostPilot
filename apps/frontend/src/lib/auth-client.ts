@@ -105,10 +105,14 @@ export const signIn = new Proxy(
     }
 
     if (providerOrOptions === "google") {
-      return await authClient.signIn.social({
+      const res = await authClient.signIn.social({
         provider: "google",
         callbackURL: options?.callbackUrl || "/feed",
       });
+      if (res?.error) {
+        return { error: res.error.message || "Google authentication failed", ok: false };
+      }
+      return { ok: true, error: null };
     }
 
     if (typeof providerOrOptions === "object") {

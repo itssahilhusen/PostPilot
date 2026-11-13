@@ -4,15 +4,29 @@ import { organization } from "better-auth/plugins";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+const resolveBaseURL = () => {
+  if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+};
+
 export const auth = betterAuth({
   secret:
     process.env.BETTER_AUTH_SECRET ||
     "reerts-better-auth-secret-key-32-chars-min-2026",
-  baseURL:
-    process.env.BETTER_AUTH_URL ||
-    process.env.NEON_AUTH_BASE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
+  baseURL: resolveBaseURL(),
+  trustedOrigins: [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://postpilot-tan-phi.vercel.app",
+    "https://*.vercel.app",
+    ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
+    ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+    ...(process.env.VERCEL_PROJECT_PRODUCTION_URL ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`] : []),
+  ],
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
