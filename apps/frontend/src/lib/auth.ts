@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { organization } from "better-auth/plugins";
+import { nextCookies } from "better-auth/next-js";
 import { rawPrisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
@@ -69,6 +70,7 @@ export const auth = betterAuth({
   },
   plugins: [
     organization(),
+    nextCookies(),
   ],
   user: {
     additionalFields: {

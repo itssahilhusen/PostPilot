@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { rawPrisma } from "@/lib/prisma";
 import { toNextJsHandler } from "better-auth/next-js";
 
 const handlers = toNextJsHandler(auth);
@@ -29,6 +30,23 @@ export const GET = async (request: Request) => {
     if (location) {
       if (location.includes("error")) {
         console.error(`[BetterAuth GET Redirecting to Error]: ${location}`);
+        if (location.includes("error=internal_server_error") && !location.includes("error_description")) {
+          let extraDesc = "Database query failed during authentication callback.";
+          try {
+            await rawPrisma.$queryRaw`SELECT 1`;
+          } catch (dbErr: any) {
+            extraDesc = `Database unreachable: ${dbErr?.message || dbErr}`;
+          }
+          const separator = location.includes("?") ? "&" : "?";
+          const newLocation = `${location}${separator}error_description=${encodeURIComponent(extraDesc)}`;
+          const newHeaders = new Headers(res.headers);
+          newHeaders.set("Location", newLocation);
+          return new Response(res.body, {
+            status: res.status,
+            statusText: res.statusText,
+            headers: newHeaders,
+          });
+        }
       } else {
         console.log(`[BetterAuth GET Redirecting]: ${location}`);
       }
