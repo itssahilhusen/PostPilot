@@ -7,7 +7,7 @@ const globalForPrisma = globalThis as unknown as {
   lastDbCheckTime: number;
 };
 
-const rawPrisma = globalForPrisma.prisma ?? new PrismaClient();
+export const rawPrisma = globalForPrisma.prisma ?? new PrismaClient();
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = rawPrisma;
 
 let isDbReachable: boolean | null = globalForPrisma.isDbReachable ?? null;

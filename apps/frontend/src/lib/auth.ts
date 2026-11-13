@@ -1,22 +1,30 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { organization } from "better-auth/plugins";
-import { prisma } from "@/lib/prisma";
+import { rawPrisma, prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-
-const resolveBaseURL = () => {
-  if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-};
 
 export const auth = betterAuth({
   secret:
     process.env.BETTER_AUTH_SECRET ||
-    "reerts-better-auth-secret-key-32-chars-min-2026",
-  baseURL: resolveBaseURL(),
+    process.env.NEXTAUTH_SECRET ||
+    "postpilot-better-auth-secret-key-32-chars-min",
+  baseURL: {
+    allowedHosts: [
+      "localhost:3000",
+      "127.0.0.1:3000",
+      "postpilot-tan-phi.vercel.app",
+      "*.vercel.app",
+      ...(process.env.VERCEL_PROJECT_PRODUCTION_URL ? [process.env.VERCEL_PROJECT_PRODUCTION_URL] : []),
+      ...(process.env.VERCEL_URL ? [process.env.VERCEL_URL.replace(/^https?:\/\//, "")] : []),
+    ],
+    fallback:
+      process.env.BETTER_AUTH_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.NODE_ENV === "production"
+        ? "https://postpilot-tan-phi.vercel.app"
+        : "http://localhost:3000"),
+  },
   trustedOrigins: [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -24,12 +32,17 @@ export const auth = betterAuth({
     "https://*.vercel.app",
     ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
     ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
-    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+    ...(process.env.VERCEL_URL
+      ? [process.env.VERCEL_URL.startsWith("http") ? process.env.VERCEL_URL : `https://${process.env.VERCEL_URL}`]
+      : []),
     ...(process.env.VERCEL_PROJECT_PRODUCTION_URL ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`] : []),
   ],
-  database: prismaAdapter(prisma, {
+  database: prismaAdapter(rawPrisma, {
     provider: "postgresql",
   }),
+  account: {
+    storeStateStrategy: "cookie",
+  },
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
@@ -46,8 +59,8 @@ export const auth = betterAuth({
   },
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID || "google-client-id-demo",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "google-client-secret-demo",
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     },
   },
   plugins: [
