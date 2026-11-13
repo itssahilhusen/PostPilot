@@ -7,12 +7,7 @@ import bcrypt from "bcryptjs";
 const resolveBaseURL = () => {
   if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  if (process.env.VERCEL_URL) {
-    const vUrl = process.env.VERCEL_URL;
-    return vUrl.startsWith("http") ? vUrl : `https://${vUrl}`;
-  }
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
     return "https://postpilot-tan-phi.vercel.app";
   }
   return "http://localhost:3000";
