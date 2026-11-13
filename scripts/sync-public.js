@@ -31,3 +31,4 @@ if (fs.existsSync(rootBrand)) {
 }
 
 console.log('[sync-public] Successfully synchronized public assets.');
+

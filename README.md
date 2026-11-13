@@ -59,8 +59,8 @@
    Ensure `.env` contains your API credentials:
    ```env
    DATABASE_URL="postgresql://user:password@localhost:5432/postpilot"
-   NEXTAUTH_URL="http://localhost:3000"
-   NEXTAUTH_SECRET="your-nextauth-secret"
+   BETTER_AUTH_URL="http://localhost:3000"
+   BETTER_AUTH_SECRET="your-better-auth-secret"
    GEMINI_API_KEY="AIzaSy..."
    META_APP_ID="your-meta-app-id"
    META_APP_SECRET="your-meta-app-secret"

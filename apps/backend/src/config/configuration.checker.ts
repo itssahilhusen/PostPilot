@@ -12,8 +12,8 @@ export class ConfigurationChecker {
       this.issues.push("REDIS_URL is not set. Defaulting to redis://localhost:6379");
     }
 
-    if (!process.env.NEXTAUTH_SECRET) {
-      this.issues.push("NEXTAUTH_SECRET is using default development secret. Please set a strong secret in production.");
+    if (!process.env.BETTER_AUTH_SECRET) {
+      this.issues.push("BETTER_AUTH_SECRET is using default development secret. Please set a strong secret in production.");
     }
   }
 

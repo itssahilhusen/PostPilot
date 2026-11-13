@@ -29,7 +29,7 @@ export async function sendFlywheelNotification(
     return { success: false, error: "No webhook URL provided" };
   }
 
-  const baseUrl = payload.appBaseUrl || process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const baseUrl = payload.appBaseUrl || process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const approveUrl = `${baseUrl}/api/automations/daily-pipeline/review?action=approve&postId=${encodeURIComponent(payload.postId)}`;
   const studioUrl = `${baseUrl}/studio?tab=design&postId=${encodeURIComponent(payload.postId)}`;
   const calendarUrl = `${baseUrl}/calendar`;

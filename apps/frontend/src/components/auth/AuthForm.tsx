@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn } from "@/lib/auth-client";
 import { Loader2, X, Sparkles, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -83,7 +83,7 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
         toast.success("Account created successfully! Signing in...");
       }
 
-      // NextAuth credentials login
+      // Better Auth credentials login
       const result = await signIn("credentials", {
         redirect: false,
         email,

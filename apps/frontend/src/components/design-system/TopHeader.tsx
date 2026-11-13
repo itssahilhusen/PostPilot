@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { PostPilotLogo } from "./PostPilotLogo";
 
