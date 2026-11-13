@@ -14,6 +14,32 @@ export function WorkflowView() {
 
   // Search filter for Node Templates
   const [searchQuery, setSearchQuery] = useState("");
+  const [isNodeLibraryOpen, setIsNodeLibraryOpen] = useState(false);
+  const nodeLibraryRef = useRef<HTMLDivElement>(null);
+
+  // Close node library popover on outside click or Escape
+  useEffect(() => {
+    if (!isNodeLibraryOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        nodeLibraryRef.current &&
+        !nodeLibraryRef.current.contains(e.target as Node)
+      ) {
+        setIsNodeLibraryOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsNodeLibraryOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isNodeLibraryOpen]);
 
   // Canvas zoom, pan & tool state
   const [zoomLevel, setZoomLevel] = useState<number>(100);
@@ -270,10 +296,15 @@ export function WorkflowView() {
 
   return (
     <main
-      className="flex-1 flex flex-row gap-3 overflow-hidden relative select-none"
+      className="flex-1 h-full rounded-2xl bg-[#0e0f12]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden relative select-none font-sans"
       style={{
-        background: "transparent",
-        padding: "0px",
+        background: "rgba(14, 18, 19, 0.75)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+        borderRadius: "20px",
+        boxShadow:
+          "rgba(0, 0, 0, 0.5) 0px 10px 30px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
       }}
     >
       <style>{`
@@ -287,141 +318,30 @@ export function WorkflowView() {
         }
       `}</style>
 
-      {/* ============================================================== */}
-      {/* 1. LEFT SIDEBAR PANEL: "Node Templates" / Library Palette      */}
-      {/* ============================================================== */}
+      {/* Top-Left Canvas Status / Active Workspace Indicator */}
       <div
-        className="w-64 h-full shrink-0 flex flex-col rounded-2xl backdrop-blur-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden p-3.5 z-20"
+        className="absolute top-3.5 left-3.5 flex items-center gap-2 px-3 h-[34px] rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.6)] backdrop-blur-md z-40 pointer-events-auto"
         style={{
-          background: "rgba(14, 18, 19, 0.75)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "rgba(20, 24, 24, 0.85)",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
           boxShadow:
-            "rgba(0, 0, 0, 0.5) 0px 10px 30px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
+            "rgba(0, 0, 0, 0.4) 0px 8px 20px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset",
         }}
       >
-        {/* Search input with lime icon - height: 34px */}
-        <div className="relative flex items-center mb-3 shrink-0 h-[34px]">
-          <svg
-            className="absolute left-2.5 w-4 h-4 text-[#c5f52a]/70 pointer-events-none"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <circle cx="11" cy="11" r="7" strokeWidth="2" />
-            <line x1="16" y1="16" x2="21" y2="21" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search nodes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-[34px] pl-8 pr-3 py-1.5 rounded-xl border border-white/[0.08] text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-[#c5f52a]/60 transition-colors"
-            style={{ background: "rgba(255, 255, 255, 0.05)" }}
-          />
-        </div>
-
-        {/* Section Header */}
-        <div className="flex items-center justify-between px-1 mb-3 shrink-0">
-          <span className="text-[10.5px] font-bold text-neutral-300 tracking-wider uppercase font-mono">
-            Node Templates
-          </span>
-          <span
-            className="px-2.5 py-0.5 rounded-full text-[10px] font-mono text-[#c5f52a] font-semibold tracking-wide"
-            style={{
-              background: "rgba(197, 245, 42, 0.12)",
-              border: "1px solid rgba(197, 245, 42, 0.25)",
-            }}
-          >
-            275
-          </span>
-        </div>
-
-        {/* 2-Column Template Grid */}
-        <div className="grid grid-cols-2 gap-2 overflow-y-auto hide-scrollbar flex-1 pr-0.5">
-          {filteredTemplates.map((tpl) => (
-            <button
-              key={tpl.id}
-              onClick={() => handleTemplateClick(tpl)}
-              className="flex flex-col items-center justify-center p-3 rounded-2xl hover:bg-white/10 border border-white/[0.08] hover:border-[#c5f52a]/40 transition-all text-neutral-300 group shadow-sm text-center"
-              style={{ background: "rgba(255, 255, 255, 0.05)" }}
-              title={tpl.description}
-            >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm mb-1.5 shadow-sm group-hover:scale-105 transition-transform"
-                style={{
-                  color: tpl.color,
-                  background: tpl.bg,
-                  border: `1px solid ${tpl.border}`,
-                }}
-              >
-                {tpl.iconType === "letter" ? (
-                  <span>{tpl.letter}</span>
-                ) : tpl.iconName === "import" ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : tpl.iconName === "export" ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : tpl.iconName === "preview" ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : tpl.iconName === "model" ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : tpl.iconName === "lora" ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : tpl.iconName === "multi-lora" ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : tpl.iconName === "chatgpt" ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <polygon points="12 3 22 21 2 21 12 3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-              <span className="text-[10px] font-medium text-white/90 group-hover:text-white leading-tight">
-                {tpl.name}
-              </span>
-            </button>
-          ))}
-        </div>
+        <div className="w-2 h-2 rounded-full bg-brand-lime shadow-[0_0_8px_#c5f52a]" />
+        <span className="text-xs font-semibold text-white/90">
+          Pipeline Workspace
+        </span>
+        <span className="text-[10px] font-mono text-neutral-400 border-l border-white/10 pl-2">
+          6 Nodes Active
+        </span>
       </div>
 
       {/* ============================================================== */}
-      {/* 2. FLOATING WORKFLOW CANVAS CARD                              */}
+      {/* STICKY TOP-RIGHT TOOLBAR                                      */}
       {/* ============================================================== */}
       <div
-        className="flex-1 h-full rounded-2xl bg-[#0e0f12]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden relative"
-        style={{
-          background: "rgba(14, 18, 19, 0.75)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          boxShadow:
-            "rgba(0, 0, 0, 0.5) 0px 10px 30px, rgba(255, 255, 255, 0.05) 0px 1px 0px inset",
-        }}
-      >
-        {/* ============================================================== */}
-        {/* STICKY TOP-RIGHT TOOLBAR                                      */}
-        {/* Stays fixed at top-right, aligned with Node Templates search   */}
-        {/* bar (top-3.5 = 14px, h-[34px], right-3.5 = 14px)              */}
-        {/* ============================================================== */}
-        <div
-          className="absolute top-3.5 right-3.5 flex items-center justify-between px-3 h-[34px] rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.6)] backdrop-blur-md gap-3 z-40 pointer-events-auto"
+        className="absolute top-3.5 right-3.5 flex items-center justify-between px-3 h-[34px] rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.6)] backdrop-blur-md gap-3 z-40 pointer-events-auto"
           style={{
             background: "rgba(20, 24, 24, 0.85)",
             border: "1px solid rgba(255, 255, 255, 0.12)",
@@ -1364,6 +1284,142 @@ export function WorkflowView() {
                 "rgba(0, 0, 0, 0.6) 0px 12px 32px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset",
             }}
           >
+            {/* 0. Add Node / Template Library */}
+            <div className="relative">
+              <button
+                onClick={() => setIsNodeLibraryOpen((prev) => !prev)}
+                className={cn(
+                  "w-7 h-7 rounded-xl flex items-center justify-center transition-all",
+                  isNodeLibraryOpen
+                    ? "bg-brand-lime text-black font-bold shadow-sm"
+                    : "text-neutral-400 hover:text-white hover:bg-white/5"
+                )}
+                title="Add Node / Template Library"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 4v16m8-8H4" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {isNodeLibraryOpen && (
+                <div
+                  ref={nodeLibraryRef}
+                  className="absolute bottom-11 left-0 w-64 max-h-[420px] rounded-2xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl z-50 flex flex-col gap-2.5"
+                  style={{
+                    background: "rgba(14, 18, 19, 0.95)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    boxShadow:
+                      "rgba(0, 0, 0, 0.7) 0px 16px 40px, rgba(197, 245, 42, 0.15) 0px 0px 30px",
+                  }}
+                >
+                  {/* Search input with lime icon */}
+                  <div className="relative flex items-center shrink-0 h-[32px]">
+                    <svg
+                      className="absolute left-2.5 w-3.5 h-3.5 text-[#c5f52a]/70 pointer-events-none"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle cx="11" cy="11" r="7" strokeWidth="2" />
+                      <line x1="16" y1="16" x2="21" y2="21" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="Search nodes..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full h-[32px] pl-8 pr-3 py-1 rounded-xl border border-white/[0.08] text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-[#c5f52a]/60 transition-colors"
+                      style={{ background: "rgba(255, 255, 255, 0.05)" }}
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-1 shrink-0">
+                    <span className="text-[10px] font-bold text-neutral-300 tracking-wider uppercase font-mono">
+                      Node Templates
+                    </span>
+                    <span
+                      className="px-2 py-0.5 rounded-full text-[9px] font-mono text-[#c5f52a] font-semibold tracking-wide"
+                      style={{
+                        background: "rgba(197, 245, 42, 0.12)",
+                        border: "1px solid rgba(197, 245, 42, 0.25)",
+                      }}
+                    >
+                      275
+                    </span>
+                  </div>
+
+                  {/* 2-Column Template Grid */}
+                  <div className="grid grid-cols-2 gap-1.5 overflow-y-auto hide-scrollbar max-h-64 pr-0.5">
+                    {filteredTemplates.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        onClick={() => {
+                          handleTemplateClick(tpl);
+                          setIsNodeLibraryOpen(false);
+                        }}
+                        className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-white/10 border border-white/[0.08] hover:border-[#c5f52a]/40 transition-all text-neutral-300 group shadow-sm text-center"
+                        style={{ background: "rgba(255, 255, 255, 0.05)" }}
+                        title={tpl.description}
+                      >
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs mb-1 shadow-sm group-hover:scale-105 transition-transform"
+                          style={{
+                            color: tpl.color,
+                            background: tpl.bg,
+                            border: `1px solid ${tpl.border}`,
+                          }}
+                        >
+                          {tpl.iconType === "letter" ? (
+                            <span>{tpl.letter}</span>
+                          ) : tpl.iconName === "import" ? (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : tpl.iconName === "export" ? (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : tpl.iconName === "preview" ? (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : tpl.iconName === "model" ? (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : tpl.iconName === "lora" ? (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : tpl.iconName === "multi-lora" ? (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : tpl.iconName === "chatgpt" ? (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <polygon points="12 3 22 21 2 21 12 3" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-[9.5px] font-medium text-white/90 group-hover:text-white leading-tight">
+                          {tpl.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="h-4 w-[1px] bg-neutral-700/60 mx-0.5" />
+
             {/* 1. Pan Tool */}
             <button
               onClick={() => setActiveTool("pan")}
@@ -1495,7 +1551,6 @@ export function WorkflowView() {
             </svg>
           </button>
         </div>
-      </div>
 
       {/* ============================================================== */}
       {/* AI Assistant Chat Modal / Drawer                               */}
