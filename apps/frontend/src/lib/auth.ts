@@ -1,30 +1,29 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { organization } from "better-auth/plugins";
-import { rawPrisma, prisma } from "@/lib/prisma";
+import { rawPrisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+
+const resolveBaseURL = () => {
+  if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) {
+    const vUrl = process.env.VERCEL_URL;
+    return vUrl.startsWith("http") ? vUrl : `https://${vUrl}`;
+  }
+  if (process.env.NODE_ENV === "production") {
+    return "https://postpilot-tan-phi.vercel.app";
+  }
+  return "http://localhost:3000";
+};
 
 export const auth = betterAuth({
   secret:
     process.env.BETTER_AUTH_SECRET ||
     process.env.NEXTAUTH_SECRET ||
     "postpilot-better-auth-secret-key-32-chars-min",
-  baseURL: {
-    allowedHosts: [
-      "localhost:3000",
-      "127.0.0.1:3000",
-      "postpilot-tan-phi.vercel.app",
-      "*.vercel.app",
-      ...(process.env.VERCEL_PROJECT_PRODUCTION_URL ? [process.env.VERCEL_PROJECT_PRODUCTION_URL] : []),
-      ...(process.env.VERCEL_URL ? [process.env.VERCEL_URL.replace(/^https?:\/\//, "")] : []),
-    ],
-    fallback:
-      process.env.BETTER_AUTH_URL ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.NODE_ENV === "production"
-        ? "https://postpilot-tan-phi.vercel.app"
-        : "http://localhost:3000"),
-  },
+  baseURL: resolveBaseURL(),
   trustedOrigins: [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -42,6 +41,16 @@ export const auth = betterAuth({
   }),
   account: {
     storeStateStrategy: "cookie",
+  },
+  logger: {
+    level: "debug",
+    disabled: false,
+  },
+  onAPIError: {
+    errorURL: "/login",
+    onError: (error) => {
+      console.error("[BetterAuth API Error]", error);
+    },
   },
   emailAndPassword: {
     enabled: true,
@@ -86,27 +95,28 @@ export const auth = betterAuth({
           let workspaceId = (user as any).workspaceId;
           if (!workspaceId) {
             try {
-              const ws = await prisma.workspace.findFirst();
+              const ws = await rawPrisma.workspace.findFirst();
               if (ws) {
                 workspaceId = ws.id;
               } else {
                 const cleanName = user.name || user.email.split("@")[0];
-                const newWs = await prisma.workspace.create({
+                const newWs = await rawPrisma.workspace.create({
                   data: {
                     name: `${cleanName}'s Workspace`,
-                    handle: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-ws`,
+                    handle: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-ws-${Date.now().toString(36)}`,
                   },
                 });
                 workspaceId = newWs.id;
               }
             } catch (e) {
-              workspaceId = "ws-default-1";
+              console.error("[Auth User Create Hook] Workspace setup error:", e);
+              workspaceId = null;
             }
           }
           return {
             data: {
               ...user,
-              workspaceId,
+              workspaceId: workspaceId || null,
               role: (user as any).role || "OWNER",
             },
           };

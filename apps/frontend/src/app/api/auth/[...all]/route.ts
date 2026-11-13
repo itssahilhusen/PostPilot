@@ -25,7 +25,14 @@ export const POST = async (request: Request) => {
 export const GET = async (request: Request) => {
   try {
     const res = await handlers.GET(request);
-    if (!res.ok) {
+    const location = res.headers.get("Location");
+    if (location) {
+      if (location.includes("error")) {
+        console.error(`[BetterAuth GET Redirecting to Error]: ${location}`);
+      } else {
+        console.log(`[BetterAuth GET Redirecting]: ${location}`);
+      }
+    } else if (!res.ok) {
       console.error(`[BetterAuth GET Error ${res.status}]`, res.statusText);
     }
     return res;

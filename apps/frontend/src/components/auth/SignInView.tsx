@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -53,6 +53,14 @@ export function SignInView() {
 
   // Carousel state
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+  useEffect(() => {
+    const errorParam = searchParams?.get("error");
+    if (errorParam) {
+      const errorDesc = searchParams?.get("error_description");
+      toast.error(errorDesc || `Authentication failed: ${errorParam}. Please try again.`);
+    }
+  }, [searchParams]);
 
   // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
