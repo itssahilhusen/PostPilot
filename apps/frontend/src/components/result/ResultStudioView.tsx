@@ -1,13 +1,115 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { INITIAL_RESULT_SLIDES, ResultSlide } from "@/lib/mock/result-data";
+
+function ResultPromptBar({
+  isProcessingAI,
+  onSubmit,
+  onToast,
+}: {
+  isProcessingAI: boolean;
+  onSubmit: (query: string) => void;
+  onToast: (msg: string) => void;
+}) {
+  const [inputVal, setInputVal] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputVal.trim() || isProcessingAI) return;
+    const q = inputVal.trim();
+    setInputVal("");
+    onSubmit(q);
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="w-full flex items-center gap-2 sm:gap-3 bg-[#131619]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl px-3 sm:px-4 py-2 hover:border-white/20 transition-all ring-1 ring-white/5"
+    >
+      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-brand-lime/10 flex items-center justify-center shrink-0">
+        <svg
+          className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-lime"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path d="M12 2l2.4 7.2L21.6 12l-7.2 2.4L12 21.6l-2.4-7.2L2.4 12l7.2-2.4L12 2z" />
+        </svg>
+      </div>
+
+      <input
+        value={inputVal}
+        onChange={(e) => setInputVal(e.target.value)}
+        disabled={isProcessingAI}
+        className="flex-1 bg-transparent border-0 text-[11px] sm:text-xs text-white placeholder-neutral-400 focus:outline-none focus:ring-0 p-0 font-normal min-w-0"
+        placeholder={
+          isProcessingAI
+            ? "AI is synthesizing refinement..."
+            : "Ask AI to polish slide, refine tone, or improve copy..."
+        }
+        type="text"
+      />
+
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          type="button"
+          onClick={() => onToast("Voice recognition ready")}
+          className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          title="Voice input"
+          aria-label="Voice input"
+        >
+          <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              d="M19 11a7 7 0 01-14 0m7 7v4m-4 0h8m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+            />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onToast("Upload reference screenshot or PDF")}
+          className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          title="Attach reference"
+          aria-label="Attach reference"
+        >
+          <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+            />
+          </svg>
+        </button>
+
+        <button
+          type="submit"
+          disabled={isProcessingAI || !inputVal.trim()}
+          className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-brand-lime hover:bg-brand-limeHover text-black flex items-center justify-center transition-colors shadow-sm cursor-pointer disabled:opacity-40"
+          title="Generate"
+          aria-label="Generate"
+        >
+          <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              d="M5 10l7-7m0 0l7 7m-7-7v18"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2.5"
+            />
+          </svg>
+        </button>
+      </div>
+    </form>
+  );
+}
 
 export function ResultStudioView() {
   const [slides, setSlides] = useState<ResultSlide[]>(INITIAL_RESULT_SLIDES);
   const [activeSlideIndex, setActiveSlideIndex] = useState(1); // Slide 2 is active by default
-  const [promptInput, setPromptInput] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
 
@@ -117,13 +219,8 @@ export function ResultStudioView() {
     }, 400);
   };
 
-  const handleCustomPromptSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!promptInput.trim()) return;
-
+  const handleCustomPromptSubmit = useCallback((query: string) => {
     setIsProcessingAI(true);
-    const query = promptInput.trim();
-    setPromptInput("");
 
     setTimeout(() => {
       setSlides((prev) =>
@@ -138,7 +235,7 @@ export function ResultStudioView() {
       setIsProcessingAI(false);
       showToast(`AI refined slide ${activeSlideIndex + 1}: "${query}"`);
     }, 450);
-  };
+  }, [activeSlideIndex]);
 
   const handleAddSlide = () => {
     const newSlideNumber = slides.length + 1;
@@ -374,87 +471,12 @@ export function ResultStudioView() {
               ))}
             </div>
 
-            {/* AI Prompt Input Bar */}
-            <form
+            {/* AI Prompt Input Bar (Isolated from slide track re-renders) */}
+            <ResultPromptBar
+              isProcessingAI={isProcessingAI}
               onSubmit={handleCustomPromptSubmit}
-              className="w-full flex items-center gap-2 sm:gap-3 bg-[#131619]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl px-3 sm:px-4 py-2 hover:border-white/20 transition-all ring-1 ring-white/5"
-            >
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-brand-lime/10 flex items-center justify-center shrink-0">
-                <svg
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-lime"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 2l2.4 7.2L21.6 12l-7.2 2.4L12 21.6l-2.4-7.2L2.4 12l7.2-2.4L12 2z" />
-                </svg>
-              </div>
-
-              <input
-                value={promptInput}
-                onChange={(e) => setPromptInput(e.target.value)}
-                disabled={isProcessingAI}
-                className="flex-1 bg-transparent border-0 text-[11px] sm:text-xs text-white placeholder-neutral-400 focus:outline-none focus:ring-0 p-0 font-normal min-w-0"
-                placeholder={
-                  isProcessingAI
-                    ? "AI is synthesizing refinement..."
-                    : "Ask AI to polish slide, refine tone, or improve copy..."
-                }
-                type="text"
-              />
-
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => showToast("Voice recognition ready")}
-                  className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                  title="Voice input"
-                  aria-label="Voice input"
-                >
-                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      d="M19 11a7 7 0 01-14 0m7 7v4m-4 0h8m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                    />
-                  </svg>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => showToast("Upload reference screenshot or PDF")}
-                  className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                  title="Attach reference"
-                  aria-label="Attach reference"
-                >
-                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                    />
-                  </svg>
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isProcessingAI || !promptInput.trim()}
-                  className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-brand-lime hover:bg-brand-limeHover text-black flex items-center justify-center transition-colors shadow-sm cursor-pointer disabled:opacity-40"
-                  title="Generate"
-                  aria-label="Generate"
-                >
-                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      d="M5 10l7-7m0 0l7 7m-7-7v18"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2.5"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </form>
+              onToast={showToast}
+            />
 
             {/* Filmstrip Thumbs */}
             <div className="pointer-events-auto mt-1.5 sm:mt-2 flex items-center gap-2 sm:gap-3 overflow-x-auto max-w-full py-1 no-scrollbar">

@@ -68,6 +68,7 @@ const LOGS_FILE = resolveStorePath("news-fetch-logs.json");
 let cachedSources: NewsSourceItem[] | null = null;
 let cachedArticles: NewsArticleItem[] | null = null;
 let cachedLogs: FetchLogEntry[] | null = null;
+let saveArticlesTimer: NodeJS.Timeout | null = null;
 
 // Normalize URL for canonical comparison and deduplication
 export function normalizeCanonicalUrl(urlStr: string): string {
@@ -168,16 +169,22 @@ export class NewsSourcesService {
     return cachedArticles;
   }
 
-  // Save Articles
+  // Save Articles (Asynchronous & Compact to avoid freezing event loop on 8MB JSON)
   static saveArticles(articles: NewsArticleItem[]) {
     cachedArticles = articles;
-    try {
-      const dir = path.dirname(ARTICLES_FILE);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(ARTICLES_FILE, JSON.stringify(articles, null, 2), "utf-8");
-    } catch (e) {
-      console.error("Failed to save news articles file:", e);
-    }
+    if (saveArticlesTimer) clearTimeout(saveArticlesTimer);
+    saveArticlesTimer = setTimeout(() => {
+      try {
+        const dir = path.dirname(ARTICLES_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        const compactJson = JSON.stringify(articles);
+        fs.promises.writeFile(ARTICLES_FILE, compactJson, "utf-8").catch((err) => {
+          console.error("Failed to write news articles file asynchronously:", err);
+        });
+      } catch (e) {
+        console.error("Failed to save news articles file:", e);
+      }
+    }, 400);
   }
 
   // Add Articles with Deduplication

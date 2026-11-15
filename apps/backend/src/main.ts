@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import "./config/load-env";
 import * as dns from "node:dns";
 import compression from "compression";
 import cookieParser from "cookie-parser";

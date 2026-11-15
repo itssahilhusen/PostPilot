@@ -163,8 +163,11 @@ model SocialAccount {
   updatedAt    DateTime  @updatedAt
 
   personas     Persona[]
+  deliveries   PostDelivery[]
+  queueSchedule QueueSchedule?
 
   @@unique([workspaceId, provider, handle])
+  @@unique([id, workspaceId])
 }
 
 model Post {
@@ -186,9 +189,97 @@ model Post {
   updatedAt     DateTime      @updatedAt
 
   variants      PostVariant[]
+  deliveries    PostDelivery[]
+  history       PostHistory[]
 
   @@index([workspaceId, status])
   @@index([scheduledAt])
+  @@unique([id, workspaceId])
+}
+
+// Each destination has its own lifecycle and external response.
+model PostDelivery {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  postId         String
+  accountId      String
+  post           Post          @relation(fields: [postId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  account        SocialAccount @relation(fields: [accountId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  content        String?       @db.Text
+  status         String        @default("PENDING")
+  scheduledAt    DateTime?
+  queuePosition  Int?
+  attemptCount   Int           @default(0)
+  nextAttemptAt  DateTime?
+  claimToken     String?
+  claimedUntil   DateTime?
+  externalPostId String?
+  externalUrl    String?
+  failureReason  String?       @db.Text
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  attempts       PublishingAttempt[]
+
+  @@unique([postId, accountId])
+  @@unique([accountId, scheduledAt])
+  @@index([workspaceId, status, scheduledAt])
+  @@index([status, nextAttemptAt])
+  @@index([accountId, queuePosition])
+}
+
+model PublishingAttempt {
+  id             String       @id @default(cuid())
+  deliveryId     String
+  delivery       PostDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  attemptNumber  Int
+  status         String
+  startedAt      DateTime     @default(now())
+  completedAt    DateTime?
+  error          String?      @db.Text
+  response       Json?
+  externalPostId String?
+
+  @@unique([deliveryId, attemptNumber])
+  @@index([deliveryId, startedAt])
+}
+
+model PostHistory {
+  id          String   @id @default(cuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  action      String
+  actorUserId String?
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([postId, createdAt])
+}
+
+// Times are local minutes after midnight in the schedule's IANA timezone.
+model QueueSchedule {
+  id          String        @id @default(cuid())
+  workspaceId String
+  accountId   String        @unique
+  account     SocialAccount @relation(fields: [accountId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  timezone    String
+  paused      Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  slots       QueueScheduleSlot[]
+
+  @@unique([accountId, workspaceId])
+  @@index([workspaceId])
+}
+
+model QueueScheduleSlot {
+  id         String        @id @default(cuid())
+  scheduleId String
+  schedule   QueueSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  weekday    Int
+  minute     Int
+
+  @@unique([scheduleId, weekday, minute])
 }
 
 model PostVariant {

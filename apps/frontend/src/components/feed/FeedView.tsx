@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -118,8 +118,8 @@ export function FeedView() {
     });
   }, [stories, activeTab, activeCategory, searchQuery]);
 
-  // Bookmark toggle
-  const handleBookmarkToggle = (id: string, e: React.MouseEvent) => {
+  // Bookmark toggle (Memoized)
+  const handleBookmarkToggle = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setStories((prev) =>
       prev.map((s) => {
@@ -134,7 +134,7 @@ export function FeedView() {
         return s;
       })
     );
-  };
+  }, [toast]);
 
   // Sync handler
   const handleSync = () => {
@@ -175,20 +175,24 @@ export function FeedView() {
     toast(`Successfully connected source: ${data.name}`, "success");
   };
 
-  // Card CTA actions
-  const handleGenerateCarousel = (story: FeedStory) => {
+  // Card CTA actions (Memoized)
+  const handleGenerateCarousel = useCallback((story: FeedStory) => {
     toast(`Generating carousel for: "${story.title.slice(0, 32)}..."`, "success");
     setTimeout(() => {
       router.push(`/result?source=${encodeURIComponent(story.id)}`);
     }, 600);
-  };
+  }, [router, toast]);
 
-  const handleDraft = (story: FeedStory) => {
+  const handleDraft = useCallback((story: FeedStory) => {
     toast(`Draft created: "${story.title.slice(0, 32)}..."`, "success");
     setTimeout(() => {
       router.push(`/result?mode=draft&source=${encodeURIComponent(story.id)}`);
     }, 600);
-  };
+  }, [router, toast]);
+
+  const handleSelectStory = useCallback((s: FeedStory) => {
+    setSelectedStory(s);
+  }, []);
 
   const handleCopyLink = (story: FeedStory) => {
     navigator.clipboard?.writeText(window.location.href);
@@ -201,7 +205,7 @@ export function FeedView() {
       {/* 1. SEPARATE TOP ACTION & SEARCH BAR (Topbar UI Style)          */}
       {/* ============================================================== */}
       <div
-        className="h-14 px-4 flex items-center justify-between shrink-0 select-none rounded-2xl relative z-30"
+        className="h-14 px-4 flex items-center justify-between shrink-0 select-none rounded-2xl relative z-20"
         style={{
           background: "rgba(14, 18, 19, 0.75)",
           backdropFilter: "blur(24px)",
@@ -692,10 +696,10 @@ export function FeedView() {
                 key={story.id}
                 story={story}
                 onBookmarkToggle={handleBookmarkToggle}
-                onRead={(s) => setSelectedStory(s)}
+                onRead={handleSelectStory}
                 onDraft={handleDraft}
                 onAction={handleGenerateCarousel}
-                onMenuClick={(s) => setSelectedStory(s)}
+                onMenuClick={handleSelectStory}
               />
             ))}
           </div>

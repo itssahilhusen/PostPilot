@@ -39,7 +39,7 @@ interface FeedStoryCardProps {
   className?: string;
 }
 
-export function FeedStoryCard({
+export const FeedStoryCard = React.memo(function FeedStoryCard({
   story,
   onBookmarkToggle,
   onRead,
@@ -377,5 +377,5 @@ export function FeedStoryCard({
       </div>
     </article>
   );
-}
+});
 

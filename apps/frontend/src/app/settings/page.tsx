@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AppShell } from "@/components/design-system/AppShell";
 import { cn } from "@/lib/utils";
 import { 
@@ -19,7 +19,42 @@ import {
 import { toast } from "sonner";
 
 export default function SettingsPage() {
+  const metaBackend = process.env.NEXT_PUBLIC_BACKEND_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3001");
+  const [metaAccounts, setMetaAccounts] = useState<Array<{ id: string; provider: string; name: string; handle: string; status: string; details?: { username?: string } }>>([]);
+  const [metaError, setMetaError] = useState("");
   const [activeTab, setActiveTab] = useState<"general" | "integrations" | "ai" | "notifications">("general");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "integrations") setActiveTab("integrations");
+    const outcome = params.get("meta");
+    if (outcome === "connected") toast.success("Meta accounts discovered");
+    if (outcome === "denied") toast.error("Meta access was denied. Please grant the requested Pages permissions.");
+    else if (outcome === "code_exchange_failed") toast.error("Meta sign-in expired or could not be exchanged. Please try again.");
+    else if (outcome === "no_pages") toast.error("Meta granted Page-list permission but found no Pages. Use a Facebook account with Page access.");
+    else if (outcome === "missing_pages_permission") toast.error("Meta did not grant pages_show_list. Update your Facebook Login for Business configuration and reconnect.");
+    else if (outcome === "page_access_missing") toast.error("Meta listed a Page but did not provide a usable Page token. Check Page asset access and permissions.");
+    else if (outcome && outcome !== "connected") toast.error("Meta account connection did not complete. Please try again.");
+  }, []);
+  useEffect(() => {
+    if (activeTab !== "integrations") return;
+    if (!metaBackend) { setMetaError("Meta backend URL is not configured."); return; }
+    fetch(`${metaBackend}/api/integrations/meta/accounts`, { credentials: "include" })
+      .then(async (response) => { if (!response.ok) throw new Error("Could not load Meta accounts"); return response.json(); })
+      .then((data) => { setMetaAccounts(data.accounts || []); setMetaError(""); })
+      .catch((error) => setMetaError(error.message));
+  }, [activeTab, metaBackend]);
+  const disconnectMeta = async (id: string) => {
+    const response = await fetch(`${metaBackend}/api/integrations/meta/accounts/${encodeURIComponent(id)}`, { method: "DELETE", credentials: "include" });
+    if (!response.ok) { toast.error("Could not disconnect account"); return; }
+    setMetaAccounts((accounts) => accounts.filter((account) => account.id !== id));
+    toast.success("Account disconnected");
+  };
+  const refreshMeta = async (id: string) => {
+    const response = await fetch(`${metaBackend}/api/integrations/meta/accounts/${encodeURIComponent(id)}/refresh`, { method: "POST", credentials: "include" });
+    if (!response.ok) { toast.error("Meta token could not be renewed. Reconnect this account."); return; }
+    setMetaAccounts((accounts) => accounts.map((account) => account.id === id ? { ...account, status: "active" } : account));
+    toast.success("Meta account renewed");
+  };
   const [workspaceName, setWorkspaceName] = useState("Halcyon & Co");
   const [brandWebsite, setBrandWebsite] = useState("https://halcyon.design");
   const [geminiApiKey, setGeminiApiKey] = useState("AIzaSy••••••••••••••••••••••••••••••");
@@ -189,45 +224,17 @@ export default function SettingsPage() {
 
             {activeTab === "integrations" && (
               <div className="max-w-2xl space-y-6 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                  <div><h3 className="text-sm font-semibold text-white">Facebook Pages and Instagram</h3><p className="text-xs text-neutral-400">Connect accounts with Meta authorization.</p></div>
+                  {metaBackend && <a href={`${metaBackend}/api/integrations/meta/connect`} className="rounded-lg bg-brand-lime px-3 py-2 text-xs font-semibold text-black">Connect Facebook & Instagram</a>}
+                </div>
+                {metaError && <p className="text-xs text-red-300">{metaError}</p>}
+                {metaAccounts.map((account) => <div key={account.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] p-4"><div><div className="text-xs font-semibold text-white">{account.name}</div><div className="text-[11px] text-neutral-400">{account.provider} · {account.details?.username ? `@${account.details.username}` : account.handle} · {account.status}</div></div><div className="flex gap-2">{account.status === "expired" && <button type="button" onClick={() => refreshMeta(account.id)} className="rounded-lg bg-brand-lime px-3 py-1.5 text-xs text-black">Renew</button>}<button type="button" onClick={() => disconnectMeta(account.id)} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs text-white">Disconnect</button></div></div>)}
                 <div className="space-y-1">
                   <h2 className="text-sm font-bold text-white uppercase tracking-wider">Connected Social Channels</h2>
-                  <p className="text-xs text-neutral-400">Direct multi-platform auto-publishing and engagement sync</p>
+                  <p className="text-xs text-neutral-400">Accounts authorized for this workspace</p>
                 </div>
 
-                <div className="space-y-3">
-                  {[
-                    { name: "Instagram Business", handle: "@halcyon.design", status: "Connected", icon: "📷", connected: true },
-                    { name: "LinkedIn Page", handle: "Halcyon & Co. Agency", status: "Connected", icon: "💼", connected: true },
-                    { name: "X (Twitter)", handle: "@halcyonco", status: "Connected", icon: "𝕏", connected: true },
-                    { name: "TikTok Creator", handle: "Not connected", status: "Connect", icon: "🎵", connected: false },
-                    { name: "YouTube Shorts", handle: "Not connected", status: "Connect", icon: "▶️", connected: false },
-                  ].map((ch) => (
-                    <div
-                      key={ch.name}
-                      className="flex items-center justify-between p-4 rounded-xl bg-white/[0.04] border border-white/10"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">{ch.icon}</span>
-                        <div>
-                          <div className="text-xs font-semibold text-white">{ch.name}</div>
-                          <div className="text-[11px] text-neutral-400">{ch.handle}</div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toast.info(`${ch.name} settings toggled.`)}
-                        className={cn(
-                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer",
-                          ch.connected
-                            ? "bg-white/10 text-neutral-300 hover:bg-white/15"
-                            : "bg-brand-lime text-black font-semibold hover:bg-brand-limeHover"
-                        )}
-                      >
-                        {ch.status}
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
 

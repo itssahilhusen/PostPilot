@@ -72,6 +72,11 @@ export function AddSlotModal({
     setErrors({});
 
     const scheduledDateTime = new Date(`${date}T${time}:00`);
+    if (Number.isNaN(scheduledDateTime.getTime()) || scheduledDateTime.getTime() <= Date.now()) {
+      toast.error("Choose a future date and time.");
+      setIsSubmitting(false);
+      return;
+    }
 
     const newPostPayload = {
       title: title.trim(),
@@ -79,8 +84,6 @@ export function AddSlotModal({
       platforms,
       scheduledAt: scheduledDateTime.toISOString(),
       status: requiresApproval ? "PENDING_APPROVAL" : "SCHEDULED",
-      format: contentFormat,
-      brandKit,
     };
 
     try {
@@ -90,15 +93,13 @@ export function AddSlotModal({
         body: JSON.stringify(newPostPayload),
       });
 
-      const data = await res.json();
-      const savedPost: CalendarPostItem = data.post || {
-        id: "post_" + Date.now(),
-        ...newPostPayload,
-        status: (requiresApproval ? "PENDING_APPROVAL" : "SCHEDULED") as any,
-      };
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.post) {
+        throw new Error(data?.error || data?.message || `Could not schedule post (${res.status})`);
+      }
 
-      onSuccess(savedPost);
-      toast.success("Content slot scheduled successfully!", {
+      onSuccess(data.post);
+      toast.success("Post saved. Automatic publishing is not available yet.", {
         description: `Set for ${scheduledDateTime.toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
@@ -106,16 +107,7 @@ export function AddSlotModal({
       });
       onClose();
     } catch (err) {
-      console.error(err);
-      // Fallback save
-      const fallbackPost: CalendarPostItem = {
-        id: "post_" + Date.now(),
-        ...newPostPayload,
-        status: (requiresApproval ? "PENDING_APPROVAL" : "SCHEDULED") as any,
-      };
-      onSuccess(fallbackPost);
-      toast.success("Slot scheduled (saved locally)");
-      onClose();
+      toast.error(err instanceof Error ? err.message : "Could not schedule post");
     } finally {
       setIsSubmitting(false);
     }
@@ -126,7 +118,7 @@ export function AddSlotModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Schedule New Content Slot"
-      description="Plan, schedule, and automate releases across your social channels"
+      description="Save a scheduled post. Automatic publishing is not available yet."
       maxWidth="lg"
       footer={
         <>

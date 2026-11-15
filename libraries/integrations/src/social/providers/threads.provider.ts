@@ -16,18 +16,11 @@ export class ThreadsProvider implements ISocialMediaProvider {
     return `https://threads.net/oauth/authorize?client_id=${appId}&redirect_uri=${redirectUri}&scope=threads_basic,threads_content_publish&response_type=code&state=${state}`;
   }
 
-  async authenticate(code: string, redirectUri: string): Promise<{ tokens: AuthTokens; profile: UserProfile }> {
-    return {
-      tokens: { accessToken: "threads_token", expiresAt: new Date(Date.now() + 60 * 86400 * 1000) },
-      profile: { handle: "@founder", name: "Founder", providerId: "threads_123" },
-    };
+  async authenticate(_code: string, _redirectUri: string): Promise<{ tokens: AuthTokens; profile: UserProfile }> {
+    throw new Error("Threads account connection is not implemented");
   }
 
-  async publish(tokens: AuthTokens, content: PostContent): Promise<PublishResult> {
-    return {
-      success: true,
-      externalPostId: `threads_post_${Date.now()}`,
-    };
+  async publish(_tokens: AuthTokens, _content: PostContent): Promise<PublishResult> {
+    return { success: false, error: "Threads publishing is not implemented" };
   }
 }
-

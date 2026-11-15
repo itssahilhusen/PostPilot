@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/lib/auth-client";
@@ -72,6 +72,24 @@ export function TopHeader({
   const [workspaces, setWorkspaces] = useState<WorkspaceTab[]>(DEFAULT_WORKSPACES);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>("halcyon");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setProfileDropdownOpen(false);
+      }
+    }
+    if (profileDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profileDropdownOpen]);
 
   const removeWorkspace = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,7 +105,7 @@ export function TopHeader({
   return (
     <header
       className={cn(
-        "h-14 flex items-center justify-between z-20 shrink-0 pr-4 pl-0 select-none",
+        "h-14 flex items-center justify-between relative z-50 shrink-0 pr-4 pl-0 select-none",
         className
       )}
       style={{
@@ -126,18 +144,18 @@ export function TopHeader({
                 style={
                   isActive
                     ? {
-                        background: "rgba(255, 255, 255, 0.12)",
-                        backdropFilter: "blur(16px)",
-                        WebkitBackdropFilter: "blur(16px)",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
-                        boxShadow: "rgba(255, 255, 255, 0.15) 0px 1px 1px inset",
-                      }
+                      background: "rgba(255, 255, 255, 0.12)",
+                      backdropFilter: "blur(16px)",
+                      WebkitBackdropFilter: "blur(16px)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                      boxShadow: "rgba(255, 255, 255, 0.15) 0px 1px 1px inset",
+                    }
                     : {
-                        background: "rgba(255, 255, 255, 0.06)",
-                        backdropFilter: "blur(12px)",
-                        WebkitBackdropFilter: "blur(12px)",
-                        border: "1px solid rgba(255, 255, 255, 0.12)",
-                      }
+                      background: "rgba(255, 255, 255, 0.06)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)",
+                      border: "1px solid rgba(255, 255, 255, 0.12)",
+                    }
                 }
               >
                 <img
@@ -248,7 +266,7 @@ export function TopHeader({
           <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-brand-lime ring-2 ring-black" />
         </button>
 
-        <div className="relative">
+        <div className="relative" ref={profileDropdownRef}>
           <div
             onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
             className="flex items-center gap-2 pl-1 cursor-pointer select-none"
@@ -282,7 +300,7 @@ export function TopHeader({
 
           {profileDropdownOpen && (
             <div
-              className="absolute right-0 mt-2 w-48 rounded-xl py-1 text-xs text-neutral-200 z-50"
+              className="absolute right-0 mt-2 w-48 rounded-xl py-1 text-xs text-neutral-200 z-50 animate-in fade-in zoom-in-95 duration-100"
               style={{
                 background: "rgba(14, 18, 19, 0.95)",
                 backdropFilter: "blur(20px)",
@@ -297,12 +315,14 @@ export function TopHeader({
               </div>
               <Link
                 href="/settings"
+                onClick={() => setProfileDropdownOpen(false)}
                 className="block px-3 py-2 hover:bg-white/10 transition-colors"
               >
                 Workspace Settings
               </Link>
               <Link
                 href="/feed"
+                onClick={() => setProfileDropdownOpen(false)}
                 className="block px-3 py-2 hover:bg-white/10 transition-colors text-brand-lime"
               >
                 Feed Dashboard

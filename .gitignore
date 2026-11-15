@@ -78,6 +78,7 @@ logs/
 
 # Database Dumps, Caches & Local Store Data
 *.sql
+!libraries/database/prisma/migrations/**/*.sql
 *.dump
 *.sqlite
 *.sqlite3

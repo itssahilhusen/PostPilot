@@ -37,6 +37,7 @@ interface ComposerSheetProps {
     platforms?: string[];
   };
   onSavePost?: (post: any) => void;
+  initialScheduleDate?: string;
 }
 
 const AVAILABLE_PLATFORMS = [
@@ -53,15 +54,16 @@ export function ComposerSheet({
   onClose,
   initialPost,
   onSavePost,
+  initialScheduleDate,
 }: ComposerSheetProps) {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(
-    initialPost?.platforms || ["x", "linkedin", "threads"]
+    initialPost?.platforms || []
   );
 
   const [threads, setThreads] = useState<ThreadItem[]>([
     {
       id: "1",
-      content: initialPost?.content || "Just shipped our biggest feature yet! 🚀 Consistent multi-platform publishing is now 100% automated with AI brand voice and feedback loops.\n\n#buildinpublic #growth #socialmedia",
+      content: initialPost?.content || "",
       mediaUrls: [],
     },
   ]);
@@ -69,7 +71,7 @@ export function ComposerSheet({
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [activePreviewPlatform, setActivePreviewPlatform] = useState<"x" | "linkedin" | "instagram" | "threads">("x");
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState("2026-10-26T10:00");
+  const [scheduleDate, setScheduleDate] = useState(initialScheduleDate || "");
   const [activeTab, setActiveTab] = useState<"editor" | "preview">("editor");
 
   if (!isOpen) return null;
@@ -137,41 +139,13 @@ export function ComposerSheet({
     }, 800);
   };
 
-  const handlePostNow = async () => {
-    try {
-      const payload = {
-        title: threads[0].content.slice(0, 40),
-        content: threads[0].content,
-        rawThreads: threads,
-        platforms: selectedPlatforms,
-        status: "PUBLISHED",
-      };
+  const handlePostNow = () => {
+    toast.error("Publishing is not available yet. Save this post as a draft instead.");
+  };
 
-      let res;
-      if (initialPost?.id) {
-        res = await fetch(`/api/posts/${initialPost.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        res = await fetch("/api/posts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      }
-
-      if (res.ok) {
-        toast.success("Successfully published simultaneously across connected channels! 🎉");
-        onSavePost?.(payload);
-        onClose();
-      } else {
-        toast.error("Failed to publish post");
-      }
-    } catch (err) {
-      toast.error("Error communicating with posts API");
-    }
+  const responseError = async (res: Response) => {
+    const data = await res.json().catch(() => null);
+    return data?.error || data?.message || `Request failed (${res.status})`;
   };
 
   const handleSaveDraft = async () => {
@@ -203,6 +177,8 @@ export function ComposerSheet({
         toast.success("Draft saved to Content Studio!");
         onSavePost?.(payload);
         onClose();
+      } else {
+        toast.error(await responseError(res));
       }
     } catch (err) {
       toast.error("Error saving draft");
@@ -210,6 +186,15 @@ export function ComposerSheet({
   };
 
   const handleSchedule = async () => {
+    if (!threads[0].content.trim() || selectedPlatforms.length === 0) {
+      toast.error("Enter post content and select at least one platform.");
+      return;
+    }
+    const date = new Date(scheduleDate);
+    if (!scheduleDate || Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) {
+      toast.error("Choose a future date and time.");
+      return;
+    }
     try {
       const payload = {
         title: threads[0].content.slice(0, 40),
@@ -217,7 +202,7 @@ export function ComposerSheet({
         rawThreads: threads,
         platforms: selectedPlatforms,
         status: "SCHEDULED",
-        scheduledAt: scheduleDate,
+        scheduledAt: date.toISOString(),
       };
 
       let res;
@@ -240,6 +225,8 @@ export function ComposerSheet({
         setScheduleModalOpen(false);
         onSavePost?.(payload);
         onClose();
+      } else {
+        toast.error(await responseError(res));
       }
     } catch (err) {
       toast.error("Error scheduling post");
@@ -261,7 +248,7 @@ export function ComposerSheet({
     const found = AVAILABLE_PLATFORMS.find((item) => item.id === p);
     return found ? found.charLimit : 280;
   });
-  const minCharLimit = Math.min(...activeLimits);
+  const minCharLimit = activeLimits.length ? Math.min(...activeLimits) : 280;
   const currentChars = threads[0].content.length;
 
   return (
@@ -421,25 +408,14 @@ export function ComposerSheet({
                     {/* Card Footer Toolbar */}
                     <div className="flex items-center justify-between border-t border-border/60 bg-muted/20 px-3 py-2 text-xs">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
-                        {/* Attach media simulation */}
-                        <label className="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted hover:text-foreground cursor-pointer transition-colors" title="Attach Media">
+                        <button
+                          type="button"
+                          className="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted hover:text-foreground transition-colors"
+                          title="Media upload unavailable"
+                          onClick={() => toast.error("Media upload is not available yet.")}
+                        >
                           <ImageIcon className="size-4" />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const url = URL.createObjectURL(file);
-                                const updated = [...threads];
-                                updated[index].mediaUrls.push(url);
-                                setThreads(updated);
-                                toast.success("Media attached to post!");
-                              }
-                            }}
-                          />
-                        </label>
+                        </button>
 
                         {/* Emoji shortcut */}
                         <button
@@ -547,7 +523,7 @@ export function ComposerSheet({
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Select date and time to automatically publish across all {selectedPlatforms.length} selected networks.
+              Select a future date and time for the post. Automatic publishing is not available yet.
             </p>
 
             <div className="space-y-2">

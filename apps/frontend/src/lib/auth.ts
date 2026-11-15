@@ -57,7 +57,6 @@ export const auth = betterAuth({
         return bcrypt.hash(password, 10);
       },
       verify: async ({ hash, password }) => {
-        if (password === "password123") return true;
         return bcrypt.compare(password, hash);
       },
     },
@@ -78,10 +77,12 @@ export const auth = betterAuth({
         type: "string",
         defaultValue: "OWNER",
         required: false,
+        input: false,
       },
       workspaceId: {
         type: "string",
         required: false,
+        input: false,
       },
     },
   },
@@ -89,32 +90,18 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          let workspaceId = (user as any).workspaceId;
-          if (!workspaceId) {
-            try {
-              const ws = await rawPrisma.workspace.findFirst();
-              if (ws) {
-                workspaceId = ws.id;
-              } else {
-                const cleanName = user.name || user.email.split("@")[0];
-                const newWs = await rawPrisma.workspace.create({
-                  data: {
-                    name: `${cleanName}'s Workspace`,
-                    handle: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-ws-${Date.now().toString(36)}`,
-                  },
-                });
-                workspaceId = newWs.id;
-              }
-            } catch (e) {
-              console.error("[Auth User Create Hook] Workspace setup error:", e);
-              workspaceId = null;
-            }
-          }
+          const cleanName = user.name || user.email.split("@")[0];
+          const newWs = await rawPrisma.workspace.create({
+            data: {
+              name: `${cleanName}'s Workspace`,
+              handle: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-ws-${crypto.randomUUID()}`,
+            },
+          });
           return {
             data: {
               ...user,
-              workspaceId: workspaceId || null,
-              role: (user as any).role || "OWNER",
+              workspaceId: newWs.id,
+              role: "OWNER",
             },
           };
         },

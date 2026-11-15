@@ -23,35 +23,11 @@ export class LinkedInProvider implements ISocialMediaProvider {
     return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
   }
 
-  async authenticate(code: string, redirectUri: string): Promise<{ tokens: AuthTokens; profile: UserProfile }> {
-    return {
-      tokens: {
-        accessToken: "li_mock_access_token",
-        expiresAt: new Date(Date.now() + 60 * 86400 * 1000),
-      },
-      profile: {
-        handle: "alex-rivers",
-        name: "Alex Rivers",
-        avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=linkedin",
-        providerId: "urn:li:person:12345",
-      },
-    };
+  async authenticate(_code: string, _redirectUri: string): Promise<{ tokens: AuthTokens; profile: UserProfile }> {
+    throw new Error("LinkedIn account connection is not implemented");
   }
 
-  async publish(tokens: AuthTokens, content: PostContent): Promise<PublishResult> {
-    try {
-      // Calls LinkedIn UGC or Restli posts endpoint
-      return {
-        success: true,
-        externalPostId: `urn:li:share:${Date.now()}`,
-        url: `https://www.linkedin.com/feed/update/urn:li:share:${Date.now()}`,
-      };
-    } catch (err: any) {
-      return {
-        success: false,
-        error: err.message || "Failed to publish LinkedIn post",
-      };
-    }
+  async publish(_tokens: AuthTokens, _content: PostContent): Promise<PublishResult> {
+    return { success: false, error: "LinkedIn publishing is not implemented" };
   }
 }
-

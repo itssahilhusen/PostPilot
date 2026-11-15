@@ -1,0 +1,7 @@
+# Scheduling migration prerequisites
+
+This repository did not previously track Prisma migrations. The scheduling migration is an incremental diff from the existing Prisma schema; it assumes the `Post` and `SocialAccount` tables already match that schema. It is not a baseline and cannot initialize an empty database.
+
+Do not run `prisma migrate deploy` against an existing database until its actual schema has been inspected, drift reconciled, and a baseline representing the existing schema has been created and marked applied using Prisma's baselining procedure. The existing production schema and migration history have not been inspected here. Test the resulting baseline and incremental migration on an isolated branch containing production-like data first, using a direct database connection.
+
+The migration adds tables and indexes without deleting existing records, but does not backfill deliveries for existing posts. Application code must populate delivery rows only after verifying account ownership and choosing destinations. The database enforces matching workspace IDs between a delivery, its post, and its account. Queue weekdays use Sunday = 0 and times use minutes after midnight in the schedule's IANA timezone; scheduling code must resolve daylight-saving transitions. Attempts and history are removed when their parent delivery or post is deleted. Remote provider response fields must not contain credentials.

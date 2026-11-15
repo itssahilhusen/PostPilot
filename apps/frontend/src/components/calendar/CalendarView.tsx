@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   Channel,
   ScheduledPost,
-  INITIAL_CHANNELS,
-  CALENDAR_DAYS,
   TIME_SLOTS,
-  INITIAL_SCHEDULED_POSTS,
   TIMEZONES,
-} from "@/lib/mock/calendar-data";
+} from "@/lib/calendar-data";
 import { useToast } from "@/components/design-system/Toast";
 import { cn } from "@/lib/utils";
+import {
+  getClientCached,
+  setClientCached,
+  isClientCacheFresh,
+} from "@/lib/client-cache";
+import { AddChannelModal, ChannelPlatform } from "./AddChannelModal";
 
 export function CalendarView() {
   const { toast } = useToast();
@@ -28,10 +31,86 @@ export function CalendarView() {
     toast(description ? `${title}: ${description}` : title, variant);
   };
 
-  // State
-  const [channels, setChannels] = useState<Channel[]>(INITIAL_CHANNELS);
+  // State with instant SWR cache initialization
+  const [channels, setChannels] = useState<Channel[]>(() => getClientCached<Channel[]>("accounts_channels") || []);
+  const [channelsError, setChannelsError] = useState("");
+  const [metaMessage, setMetaMessage] = useState("");
+  const metaBackend = process.env.NEXT_PUBLIC_BACKEND_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3001");
+  useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get("meta");
+    const messages: Record<string, string> = {
+      connected: "Meta connection complete. Your Facebook and Instagram accounts are loading.",
+      no_pages: "Meta granted Page-list permission, but returned no Pages. Sign in with a Facebook user who manages a Page and select that Page during authorization.",
+      missing_pages_permission: "Meta did not grant pages_show_list. Add Page access and this permission to the Facebook Login for Business configuration, then reconnect.",
+      page_access_missing: "Meta listed a Page but did not provide a usable Page token. Check Page asset access and the configuration's Page permissions, then reconnect.",
+      denied: "Meta authorization was cancelled or denied.",
+      missing_code: "Meta did not return an authorization code. Please try again.",
+      code_exchange_failed: "Meta could not exchange the authorization code. Check your callback URL and Meta app configuration.",
+      error: "Meta connection failed. Please try again or check the backend logs.",
+    };
+    if (result) setMetaMessage(messages[result] || "Meta connection could not be completed.");
+  }, []);
+  useEffect(() => {
+    let active = true;
+    if (isClientCacheFresh("accounts_channels", 20000) && channels.length > 0) return;
+    fetch("/api/accounts", { cache: "no-store" })
+      .then(async (response) => { if (!response.ok) throw new Error("Could not load connected accounts"); return response.json(); })
+      .then((data) => {
+        if (!active) return;
+        const linked: Channel[] = (data.accounts || [])
+          .filter((account: { provider: string; status: string }) => ["facebook", "instagram"].includes(account.provider) && account.status === "active")
+          .map((account: { id: string; name: string; handle: string; avatar?: string | null; provider: "facebook" | "instagram" }) => ({
+            id: account.id, name: account.name, handle: account.handle,
+            platform: account.provider, avatarUrl: account.avatar || "/brand/postpilot-logo.png",
+            badgeBg: account.provider === "instagram" ? "bg-[#E1306C]" : "bg-[#1877F2]",
+            badgeIcon: account.provider === "instagram" ? "📷" : "f",
+          }));
+        setChannels(linked);
+        setClientCached("accounts_channels", linked);
+        setChannelsError("");
+      })
+      .catch((error) => { if (active) setChannelsError(error.message); });
+    return () => { active = false; };
+  }, [channels.length]);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
-  const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>(INITIAL_SCHEDULED_POSTS);
+  const [rawPosts, setRawPosts] = useState<any[]>(() => getClientCached<any[]>("calendar_raw_posts") || []);
+  const [postsError, setPostsError] = useState("");
+  const [startDate, setStartDate] = useState(() => { const date = new Date(); date.setHours(0, 0, 0, 0); return date; });
+  const calendarDays = useMemo(() => Array.from({ length: 5 }, (_, index) => {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + index);
+    return { dayNumber: date.getDate(), dayName: date.toLocaleDateString(undefined, { weekday: "short" }), dateStr: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}` };
+  }), [startDate]);
+  const selectedMonth = startDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const moveWindow = (days: number) => setStartDate((current) => { const next = new Date(current); next.setDate(next.getDate() + days); return next; });
+  
+  const loadPosts = useCallback(async (force = false) => {
+    if (!force && isClientCacheFresh("calendar_raw_posts", 15000) && rawPosts.length > 0) return;
+    try {
+      const response = await fetch("/api/posts", { cache: "no-store" });
+      if (!response.ok) throw new Error("Could not load scheduled posts");
+      const data = await response.json();
+      const list = data.posts || [];
+      setRawPosts(list);
+      setClientCached("calendar_raw_posts", list);
+      setPostsError("");
+    } catch (error) { setPostsError(error instanceof Error ? error.message : "Could not load posts"); }
+  }, [rawPosts.length]);
+
+  useEffect(() => { void loadPosts(); }, [loadPosts]);
+
+  const scheduledPosts = useMemo(() => {
+    return rawPosts.filter((post: { scheduledAt?: string | null }) => Boolean(post.scheduledAt)).map((post: { id: string; title: string; content: string; status: string; scheduledAt: string; platforms?: string[]; mediaUrls?: string[] }) => {
+      const date = new Date(post.scheduledAt);
+      const platform = post.platforms?.[0] || "instagram";
+      const matching = channels.filter((channel) => channel.platform === platform || (platform === "x" && channel.platform === "twitter"));
+      const channel = matching.length === 1 ? matching[0] : undefined;
+      const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      const dayIndex = calendarDays.findIndex((day) => day.dateStr === localDate);
+      const hour = date.getHours();
+      return { id: post.id, channelId: channel?.id || "", authorName: channel?.name || "PostPilot", authorHandle: channel?.handle || "", authorAvatar: channel?.avatarUrl || "/brand/postpilot-logo.png", platform: (platform === "x" ? "twitter" : platform) as ScheduledPost["platform"], platformBadgeBg: channel?.badgeBg || "bg-neutral-800", platformBadgeIcon: channel?.badgeIcon || "•", dayIndex, dayNumber: date.getDate(), dayName: date.toLocaleDateString(undefined, { weekday: "short" }), timeSlot: date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }), topOffset: Math.max(0, Math.min(450, (hour - 8) * 112 + Math.round(date.getMinutes() * 112 / 60))), imageUrl: post.mediaUrls?.[0] || "", imageAlt: post.title, caption: post.title || post.content.slice(0, 40), fullCaption: post.content, tag: post.status.toLowerCase().replaceAll("_", " "), status: post.status.toLowerCase() as ScheduledPost["status"], scheduledTime: date.toLocaleString() };
+    });
+  }, [rawPosts, channels, calendarDays]);
 
   // Settings
   const [scheduleFreq, setScheduleFreq] = useState<"daily" | "3x_week" | "custom">("daily");
@@ -42,7 +121,6 @@ export function CalendarView() {
 
   // Calendar View
   const [calendarView, setCalendarView] = useState<"today" | "month" | "year">("month");
-  const [selectedMonth, setSelectedMonth] = useState("August 2026");
   const [isMonthOpen, setIsMonthOpen] = useState(false);
 
   // Modals
@@ -60,19 +138,16 @@ export function CalendarView() {
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
 
   // Filtered posts
-  const displayedPosts = selectedChannelId
-    ? scheduledPosts.filter((p) => p.channelId === selectedChannelId)
+  const selectedChannel = channels.find((channel) => channel.id === selectedChannelId);
+  const displayedPosts = selectedChannel
+    ? scheduledPosts.filter((post) => post.platform === selectedChannel.platform)
     : scheduledPosts;
-
-  // New Channel Form State
-  const [newChannelName, setNewChannelName] = useState("");
-  const [newChannelHandle, setNewChannelHandle] = useState("");
-  const [newChannelPlatform, setNewChannelPlatform] = useState<Channel["platform"]>("instagram");
 
   // New Post Form State
   const [newPostCaption, setNewPostCaption] = useState("");
   const [newPostTag, setNewPostTag] = useState("#brand");
   const [newPostChannelId, setNewPostChannelId] = useState(channels[0]?.id || "");
+  useEffect(() => { if (!newPostChannelId && channels[0]) setNewPostChannelId(channels[0].id); }, [channels, newPostChannelId]);
   const [newPostTime, setNewPostTime] = useState("09:00");
 
   const handleToggleChannelFilter = (channelId: string) => {
@@ -88,133 +163,78 @@ export function CalendarView() {
       const ch = channels.find((c) => c.id === channelId);
       addToast({
         title: "Channel Filtered",
-        description: `Showing posts for ${ch?.name || "selected channel"}`,
+        description: `Showing ${ch?.platform || "platform"} posts. Posts are not assigned to individual accounts yet.`,
         variant: "info",
       });
     }
   };
 
-  const handleCreateChannel = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newChannelName.trim() || !newChannelHandle.trim()) {
-      addToast({
-        title: "Missing Information",
-        description: "Please provide a channel name and handle",
-        variant: "error",
-      });
-      return;
+  const unavailable = () => addToast({ title: "Publishing unavailable", description: "Automatic publishing is not available yet.", variant: "info" });
+  const handleCreateChannel = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (metaBackend) {
+      window.location.assign(`${metaBackend}/api/integrations/meta/connect?returnTo=calendar`);
+    } else {
+      addToast({ title: "Meta backend unavailable", description: "Configure NEXT_PUBLIC_BACKEND_URL", variant: "error" });
     }
-
-    const platformBadgeMap: Record<Channel["platform"], { bg: string; icon: string }> = {
-      instagram: { bg: "bg-[#E1306C]", icon: "📷" },
-      discord: { bg: "bg-[#5865F2]", icon: "💬" },
-      twitter: { bg: "bg-black border border-neutral-700", icon: "𝕏" },
-      tiktok: { bg: "bg-black border border-pink-500", icon: "🎵" },
-      linkedin: { bg: "bg-[#0A66C2]", icon: "in" },
-      youtube: { bg: "bg-[#FF0000]", icon: "▶" },
-    };
-
-    const newCh: Channel = {
-      id: `ch-${Date.now()}`,
-      name: newChannelName.trim(),
-      handle: newChannelHandle.startsWith("@") ? newChannelHandle.trim() : `@${newChannelHandle.trim()}`,
-      platform: newChannelPlatform,
-      avatarUrl:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-      badgeBg: platformBadgeMap[newChannelPlatform].bg,
-      badgeIcon: platformBadgeMap[newChannelPlatform].icon,
-    };
-
-    setChannels((prev) => [...prev, newCh]);
-    setShowAddChannelModal(false);
-    setNewChannelName("");
-    setNewChannelHandle("");
-    addToast({
-      title: "Channel Connected",
-      description: `Successfully added ${newCh.name} (${newCh.handle})`,
-      variant: "success",
-    });
   };
-
-  const handleDeletePost = (postId: string) => {
-    setScheduledPosts((prev) => prev.filter((p) => p.id !== postId));
-    setOpenMenuPostId(null);
-    if (activeModalPost?.id === postId) {
+  const handleSelectPlatform = (platform: ChannelPlatform) => {
+    if (platform.isMeta) {
+      handleCreateChannel();
+    } else {
+      addToast({
+        title: `${platform.name} Connection`,
+        description: `Connecting ${platform.name} will be available once the platform credentials and OAuth are configured.`,
+        variant: "info",
+      });
+    }
+  };
+  const handleDisconnectChannel = async (channel: Channel) => {
+    try {
+      const response = await fetch(`/api/accounts?id=${encodeURIComponent(channel.id)}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Could not disconnect channel");
+      setChannels((current) => current.filter((item) => item.id !== channel.id));
+      if (selectedChannelId === channel.id) setSelectedChannelId(null);
+      addToast({ title: "Channel disconnected", description: channel.name });
+    } catch { addToast({ title: "Disconnect failed", description: "Please try again", variant: "error" }); }
+  };
+  const handleDeletePost = async (postId: string) => {
+    const post = scheduledPosts.find((item) => item.id === postId);
+    if (!post) return;
+    try {
+      const response = post.status === "draft"
+        ? await fetch(`/api/posts/${encodeURIComponent(postId)}`, { method: "DELETE" })
+        : await fetch(`/api/posts/${encodeURIComponent(postId)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "CANCELLED" }) });
+      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || "Could not change post");
       setActiveModalPost(null);
-    }
-    addToast({
-      title: "Post Removed",
-      description: "Scheduled post was deleted from your calendar",
-      variant: "info",
-    });
+      await loadPosts(true);
+      addToast({ title: post.status === "draft" ? "Draft deleted" : "Schedule cancelled" });
+    } catch (error) { addToast({ title: "Post update failed", description: error instanceof Error ? error.message : "Please try again", variant: "error" }); }
   };
-
-  const handleDuplicatePost = (post: ScheduledPost) => {
-    const duplicated: ScheduledPost = {
-      ...post,
-      id: `post-${Date.now()}`,
-      dayIndex: (post.dayIndex + 1) % 5,
-      dayNumber: CALENDAR_DAYS[(post.dayIndex + 1) % 5].dayNumber,
-      dayName: CALENDAR_DAYS[(post.dayIndex + 1) % 5].dayName,
-      caption: `Copy: ${post.caption}`,
-      topOffset: (post.topOffset + 30) % 180,
-    };
-    setScheduledPosts((prev) => [...prev, duplicated]);
-    setOpenMenuPostId(null);
-    addToast({
-      title: "Post Duplicated",
-      description: `Duplicated to ${duplicated.dayName} ${duplicated.dayNumber}`,
-      variant: "success",
-    });
+  const handleDuplicatePost = async (post: ScheduledPost) => {
+    try {
+      const response = await fetch("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: post.caption, content: post.fullCaption, platforms: [post.platform === "twitter" ? "x" : post.platform], status: "DRAFT" }) });
+      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || "Could not duplicate post");
+      addToast({ title: "Draft duplicated" });
+      setActiveModalPost(null);
+      await loadPosts(true);
+    } catch (error) { addToast({ title: "Duplicate failed", description: error instanceof Error ? error.message : "Please try again", variant: "error" }); }
   };
-
-  const handleCreatePost = (e: React.FormEvent) => {
+  const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPostCaption.trim()) {
-      addToast({
-        title: "Caption Required",
-        description: "Please enter a caption for the scheduled post",
-        variant: "error",
-      });
-      return;
-    }
-
-    const targetDayIndex = selectedDayForNewPost !== null ? selectedDayForNewPost : 0;
-    const day = CALENDAR_DAYS[targetDayIndex];
-    const ch = channels.find((c) => c.id === newPostChannelId) || channels[0];
-
-    const newPost: ScheduledPost = {
-      id: `post-${Date.now()}`,
-      channelId: ch.id,
-      authorName: ch.name,
-      authorHandle: ch.handle,
-      authorAvatar: ch.avatarUrl,
-      platform: ch.platform,
-      platformBadgeBg: ch.badgeBg,
-      platformBadgeIcon: ch.badgeIcon,
-      dayIndex: targetDayIndex,
-      dayNumber: day.dayNumber,
-      dayName: day.dayName,
-      timeSlot: newPostTime,
-      topOffset: 60 + Math.floor(Math.random() * 60),
-      imageUrl:
-        "https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=600&q=80",
-      imageAlt: "Scheduled Content Preview",
-      caption: newPostCaption.slice(0, 24) + (newPostCaption.length > 24 ? "..." : ""),
-      fullCaption: newPostCaption,
-      tag: newPostTag.startsWith("#") ? newPostTag : `#${newPostTag}`,
-      status: "scheduled",
-      scheduledTime: `${day.dayName}, Aug ${day.dayNumber} at ${newPostTime}`,
-    };
-
-    setScheduledPosts((prev) => [...prev, newPost]);
-    setShowNewPostModal(false);
-    setNewPostCaption("");
-    addToast({
-      title: "Post Scheduled",
-      description: `Scheduled on ${day.dayName} ${day.dayNumber} for ${ch.name}`,
-      variant: "success",
-    });
+    const channel = channels.find((item) => item.id === newPostChannelId);
+    const day = selectedDayForNewPost === null ? null : calendarDays[selectedDayForNewPost];
+    if (!channel || !day || !newPostCaption.trim()) { addToast({ title: "Select a channel, date and caption", variant: "error" }); return; }
+    const scheduledAt = new Date(`${day.dateStr}T${newPostTime}:00`);
+    if (scheduledAt.getTime() <= Date.now()) { addToast({ title: "Choose a future time", variant: "error" }); return; }
+    try {
+      const response = await fetch("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: newPostCaption.trim().slice(0, 80), content: [newPostCaption.trim(), newPostTag.trim()].filter(Boolean).join("\n\n"), platforms: [channel.platform === "twitter" ? "x" : channel.platform], scheduledAt: scheduledAt.toISOString(), status: "SCHEDULED" }) });
+      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || "Could not schedule post");
+      setShowNewPostModal(false);
+      setNewPostCaption("");
+      await loadPosts(true);
+      addToast({ title: "Post saved", description: "Automatic publishing is unavailable; this schedule will not publish itself", variant: "info" });
+    } catch (error) { addToast({ title: "Save failed", description: error instanceof Error ? error.message : "Please try again", variant: "error" }); }
   };
 
   return (
@@ -229,6 +249,9 @@ export function CalendarView() {
         }
       `}} />
 
+      <div className="flex flex-1 min-w-0 flex-col gap-2 overflow-hidden">
+      {metaMessage && <div role="status" className="rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-xs text-white">{metaMessage}</div>}
+      {postsError && <div role="alert" className="rounded-xl border border-red-400/40 bg-red-400/10 px-4 py-2 text-xs text-red-200">{postsError}</div>}
       {/* Main Container Housing Left Configuration Panel & Calendar Workspace */}
       <div className="flex flex-1 overflow-hidden w-full h-full gap-3">
         {/* BEGIN: LeftConfigurationPanel ("Signal Array") */}
@@ -341,6 +364,7 @@ export function CalendarView() {
                   );
                 })}
               </div>
+              {!channels.length && <p className="mb-3 text-[11px] text-neutral-500">No connected Meta channels yet.</p>}
 
               {/* Add New Channel Button */}
               <button
@@ -384,7 +408,7 @@ export function CalendarView() {
                       setScheduleFreq("daily");
                       addToast({
                         title: "Schedule Updated",
-                        description: "Daily automated publishing enabled",
+                        description: "This preference is only shown on this screen; automatic publishing is unavailable",
                         variant: "success",
                       });
                     }}
@@ -415,7 +439,7 @@ export function CalendarView() {
                       setScheduleFreq("3x_week");
                       addToast({
                         title: "Schedule Updated",
-                        description: "3x/week publishing cadence active",
+                        description: "This preference is only shown on this screen; automatic publishing is unavailable",
                         variant: "success",
                       });
                     }}
@@ -446,7 +470,7 @@ export function CalendarView() {
                       setScheduleFreq("custom");
                       addToast({
                         title: "Custom Schedule",
-                        description: "Custom publishing cadence active",
+                        description: "This preference is only shown on this screen; automatic publishing is unavailable",
                         variant: "info",
                       });
                     }}
@@ -531,7 +555,7 @@ export function CalendarView() {
                           setIsTimezoneOpen(false);
                           addToast({
                             title: "Timezone Updated",
-                            description: `Set calendar reference to ${tz.split(" · ")[0]}`,
+                            description: `Selection is not saved. Posts use your browser time zone.`,
                             variant: "info",
                           });
                         }}
@@ -562,9 +586,7 @@ export function CalendarView() {
                     setAutoSuggestTime(!autoSuggestTime);
                     addToast({
                       title: !autoSuggestTime ? "Auto-Suggest Enabled" : "Auto-Suggest Disabled",
-                      description: !autoSuggestTime
-                        ? "AI will select peak engagement windows"
-                        : "Using manual time selection",
+                      description: "This setting is not saved and does not affect post times",
                       variant: "info",
                     });
                   }}
@@ -615,9 +637,7 @@ export function CalendarView() {
                       title: !autoRecycleEvergreen
                         ? "Evergreen Recycling Enabled"
                         : "Evergreen Recycling Disabled",
-                      description: !autoRecycleEvergreen
-                        ? "Top performing posts will be recirculated"
-                        : "Evergreen recycling stopped",
+                      description: "This setting is not saved; posts are not recirculated",
                       variant: "info",
                     });
                   }}
@@ -692,7 +712,7 @@ export function CalendarView() {
                     border: "1px solid rgba(255, 255, 255, 0.05)",
                   }}
                 >
-                  Schedule post for upcoming week on all the channels
+                  Plan posts for the upcoming week
                 </div>
                 {/* Micro Action Buttons */}
                 <div className="flex items-center gap-2 text-neutral-400 pl-0.5">
@@ -700,9 +720,9 @@ export function CalendarView() {
                     type="button"
                     onClick={() => {
                       addToast({
-                        title: "AI Schedule Refreshed",
-                        description: "Synchronized 7 posts across 3 channels",
-                        variant: "success",
+                        title: "Scheduling unavailable",
+                        description: "AI scheduling is not available yet",
+                        variant: "info",
                       });
                     }}
                     title="Refresh AI Agent Plan"
@@ -744,11 +764,11 @@ export function CalendarView() {
                     type="button"
                     onClick={() => {
                       navigator.clipboard?.writeText(
-                        "Schedule post for upcoming week on all the channels\nDone — I've scheduled 7 posts across all 3 channels for the week ahead."
+                        "Plan posts for the upcoming week"
                       );
                       addToast({
                         title: "Copied to Clipboard",
-                        description: "AI agent workflow prompt & schedule copied",
+                        description: "Example prompt copied",
                         variant: "info",
                       });
                     }}
@@ -771,7 +791,7 @@ export function CalendarView() {
                 </div>
                 {/* Output Agent Result */}
                 <div className="text-[9.5px] leading-snug text-neutral-200 font-normal pt-0.5">
-                  Done — I&apos;ve scheduled 7 posts across all 3 channels for the week ahead.
+                  AI planning is coming soon. Use the calendar to save a post for a future date.
                 </div>
               </div>
             </div>
@@ -779,10 +799,10 @@ export function CalendarView() {
             {/* Card Typography & Action */}
             <div className="mt-3 px-0.5">
               <h3 className="text-[13px] font-semibold text-white tracking-tight leading-snug mb-1">
-                Agent automated workflow
+                Plan your posting workflow
               </h3>
               <p className="text-[11px] leading-relaxed mb-3 font-normal text-white/80">
-                Streamline your daily posting workflow with an AI agent.
+                Review your connected channels and scheduled posts in the calendar.
               </p>
               <button
                 type="button"
@@ -882,18 +902,17 @@ export function CalendarView() {
                     WebkitBackdropFilter: "blur(20px)",
                   }}
                 >
-                  {["July 2026", "August 2026", "September 2026", "October 2026"].map((m) => (
+                  {[-1, 0, 1].map((offset) => {
+                    const date = new Date(startDate);
+                    date.setMonth(date.getMonth() + offset, 1);
+                    const m = date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+                    return (
                     <button
                       key={m}
                       type="button"
                       onClick={() => {
-                        setSelectedMonth(m);
+                        setStartDate(date);
                         setIsMonthOpen(false);
-                        addToast({
-                          title: "Month Changed",
-                          description: `Browsing ${m}`,
-                          variant: "info",
-                        });
                       }}
                       className={cn(
                         "w-full text-left px-3 py-2 text-xs transition-colors",
@@ -904,7 +923,7 @@ export function CalendarView() {
                     >
                       {m}
                     </button>
-                  ))}
+                  ); })}
                 </div>
               )}
             </div>
@@ -926,11 +945,7 @@ export function CalendarView() {
                   type="button"
                   onClick={() => {
                     setCalendarView("today");
-                    addToast({
-                      title: "Today View",
-                      description: "Showing today's scheduled pipeline",
-                      variant: "info",
-                    });
+                    const today = new Date(); today.setHours(0, 0, 0, 0); setStartDate(today);
                   }}
                   className={cn(
                     "px-3 py-1 rounded-lg transition-colors",
@@ -957,11 +972,7 @@ export function CalendarView() {
                   type="button"
                   onClick={() => {
                     setCalendarView("month");
-                    addToast({
-                      title: "Month View",
-                      description: "Showing 5-day week overview",
-                      variant: "info",
-                    });
+                    moveWindow(5);
                   }}
                   className={cn(
                     "px-3 py-1 rounded-lg transition-colors",
@@ -982,17 +993,13 @@ export function CalendarView() {
                       : undefined
                   }
                 >
-                  Month
+                  Next 5 days
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setCalendarView("year");
-                    addToast({
-                      title: "Year View",
-                      description: "Showing yearly publishing calendar",
-                      variant: "info",
-                    });
+                    moveWindow(-5);
                   }}
                   className={cn(
                     "px-3 py-1 rounded-lg transition-colors",
@@ -1013,7 +1020,7 @@ export function CalendarView() {
                       : undefined
                   }
                 >
-                  Year
+                  Previous 5 days
                 </button>
               </div>
             </div>
@@ -1034,7 +1041,7 @@ export function CalendarView() {
               >
                 {/* Blank time label corner */}
                 <div className="h-12 calendar-col-divider" />
-                {CALENDAR_DAYS.map((day, idx) => (
+                {calendarDays.map((day, idx) => (
                   <div
                     key={day.dayNumber}
                     onClick={() => {
@@ -1058,7 +1065,7 @@ export function CalendarView() {
               </div>
 
               {/* Time Grid & Scheduled Items Canvas */}
-              <div className="relative flex-1 h-full min-h-[580px]">
+              <div className="relative flex-1 h-full min-h-[580px]" style={{ minHeight: Math.max(580, Math.max(...calendarDays.map((_, index) => displayedPosts.filter((post) => post.dayIndex === index).length), 1) * 330) }}>
                 {/* Background Grid Rows (Time Slots) */}
                 <div className="grid grid-cols-[60px_repeat(5,1fr)] h-full">
                   {/* Time Column Labels */}
@@ -1094,16 +1101,14 @@ export function CalendarView() {
                 {/* Absolute Overlay for Scheduled Content Cards */}
                 <div className="absolute inset-0 left-[60px] grid grid-cols-5 pointer-events-none p-2 gap-2 min-w-0">
                   {[0, 1, 2, 3, 4].map((colIndex) => {
-                    const post = displayedPosts.find((p) => p.dayIndex === colIndex);
-                    if (!post) {
-                      return <div key={colIndex} className="relative w-full h-full" />;
-                    }
-
+                    const posts = displayedPosts.filter((post) => post.dayIndex === colIndex);
                     return (
-                      <div key={post.id} className="relative w-full h-full">
+                      <div key={colIndex} className="relative w-full h-full">
+                      {posts.map((post, postIndex) => (
                         <article
+                          key={post.id}
                           style={{
-                            top: `${post.topOffset}px`,
+                            top: `${Math.max(post.topOffset, postIndex * 310)}px`,
                             background: "rgba(255, 255, 255, 0.08)",
                             backdropFilter: "blur(12px)",
                             WebkitBackdropFilter: "blur(12px)",
@@ -1116,11 +1121,11 @@ export function CalendarView() {
                         >
                           {/* Top Image Container with 3-dot menu and bottom overlay info */}
                           <div className="relative w-full h-44 rounded-[14px] overflow-hidden bg-neutral-900 shrink-0">
-                            <img
+                            {post.imageUrl ? <img
                               alt={post.imageAlt}
                               className="w-full h-full object-cover block"
                               src={post.imageUrl}
-                            />
+                            /> : <div className="flex h-full items-center justify-center p-4 text-center text-xs text-neutral-300">{post.caption}</div>}
 
                             {/* 3-dot context menu */}
                             <button
@@ -1171,9 +1176,9 @@ export function CalendarView() {
                                   type="button"
                                   onClick={() => {
                                     addToast({
-                                      title: "Post Published",
-                                      description: `Publishing ${post.caption} now`,
-                                      variant: "success",
+                                      title: "Publishing unavailable",
+                                      description: "Automatic publishing is not available yet",
+                                      variant: "info",
                                     });
                                     setOpenMenuPostId(null);
                                   }}
@@ -1182,13 +1187,13 @@ export function CalendarView() {
                                   Publish Now
                                 </button>
                                 <div className="border-t border-white/10 my-1" />
-                                <button
+                                {(post.status === "scheduled" || post.status === "draft") && <button
                                   type="button"
                                   onClick={() => handleDeletePost(post.id)}
                                   className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
                                 >
-                                  Delete Post
-                                </button>
+                                  {post.status === "draft" ? "Delete Draft" : "Cancel Schedule"}
+                                </button>}
                               </div>
                             )}
 
@@ -1240,15 +1245,7 @@ export function CalendarView() {
                           </p>
                           <div className="mt-1.5 px-1">
                             <span
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addToast({
-                                  title: "Tag Selected",
-                                  description: `Browsing posts tagged with ${post.tag}`,
-                                  variant: "info",
-                                });
-                              }}
-                              className="inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-medium text-white/90 border border-white/10 shadow-xs cursor-pointer hover:border-brand-lime transition-colors"
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-medium text-white/90 border border-white/10 shadow-xs"
                               style={{
                                 background: "rgba(255, 255, 255, 0.08)",
                                 backdropFilter: "blur(8px)",
@@ -1262,6 +1259,7 @@ export function CalendarView() {
                             </span>
                           </div>
                         </article>
+                      ))}
                       </div>
                     );
                   })}
@@ -1271,6 +1269,8 @@ export function CalendarView() {
           </div>
         </main>
         {/* END: CalendarWorkspace */}
+      </div>
+
       </div>
 
       {/* MODAL 1: Post Details / Preview Modal */}
@@ -1328,11 +1328,11 @@ export function CalendarView() {
 
             {/* Media Image */}
             <div className="my-4 rounded-xl overflow-hidden h-64 bg-black/50 border border-white/10 relative">
-              <img
+              {activeModalPost.imageUrl ? <img
                 src={activeModalPost.imageUrl}
                 alt={activeModalPost.imageAlt}
                 className="w-full h-full object-cover"
-              />
+              /> : <div className="flex h-full items-center justify-center p-6 text-center text-neutral-300">{activeModalPost.caption}</div>}
               <span className="absolute bottom-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/60 backdrop-blur-md text-white border border-white/20">
                 {activeModalPost.tag}
               </span>
@@ -1350,13 +1350,13 @@ export function CalendarView() {
 
             {/* Action Buttons */}
             <div className="flex items-center justify-between pt-2">
-              <button
+              {(activeModalPost.status === "scheduled" || activeModalPost.status === "draft") && <button
                 type="button"
                 onClick={() => handleDeletePost(activeModalPost.id)}
                 className="px-3.5 py-2 rounded-xl text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
               >
-                Delete
-              </button>
+                {activeModalPost.status === "draft" ? "Delete Draft" : "Cancel Schedule"}
+              </button>}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1369,9 +1369,9 @@ export function CalendarView() {
                   type="button"
                   onClick={() => {
                     addToast({
-                      title: "Post Published",
-                      description: "Published immediately across connected channel",
-                      variant: "success",
+                      title: "Publishing unavailable",
+                      description: "Automatic publishing is not available yet",
+                      variant: "info",
                     });
                     setActiveModalPost(null);
                   }}
@@ -1386,98 +1386,12 @@ export function CalendarView() {
       )}
 
       {/* MODAL 2: Add Channel Modal */}
-      {showAddChannelModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
-          onClick={() => setShowAddChannelModal(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl p-6 text-white shadow-2xl border border-white/15"
-            style={{
-              background: "rgba(18, 20, 22, 0.95)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-            }}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <h3 className="text-sm font-bold text-white">Add New Social Channel</h3>
-              <button
-                type="button"
-                onClick={() => setShowAddChannelModal(false)}
-                className="text-neutral-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateChannel} className="mt-4 space-y-4">
-              <div>
-                <label className="text-xs text-neutral-300 block mb-1.5 font-medium">Platform</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["instagram", "discord", "twitter", "tiktok", "linkedin", "youtube"] as const).map(
-                    (p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setNewChannelPlatform(p)}
-                        className={cn(
-                          "py-2 rounded-xl text-xs capitalize border transition-all text-center",
-                          newChannelPlatform === p
-                            ? "border-brand-lime bg-brand-lime/10 text-white font-medium"
-                            : "border-white/10 text-neutral-400 hover:bg-white/5"
-                        )}
-                      >
-                        {p}
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-neutral-300 block mb-1.5 font-medium">Channel Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Apex Studio"
-                  value={newChannelName}
-                  onChange={(e) => setNewChannelName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:outline-none focus:border-brand-lime"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-neutral-300 block mb-1.5 font-medium">Handle / Account ID</label>
-                <input
-                  type="text"
-                  placeholder="@apexstudio"
-                  value={newChannelHandle}
-                  onChange={(e) => setNewChannelHandle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:outline-none focus:border-brand-lime"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddChannelModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-neutral-400 hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-lime hover:bg-[#b1de22] text-black shadow-md transition-colors"
-                >
-                  Connect Channel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AddChannelModal
+        isOpen={showAddChannelModal}
+        onClose={() => setShowAddChannelModal(false)}
+        onSelectPlatform={handleSelectPlatform}
+        error={channelsError}
+      />
 
       {/* MODAL 3: Manage Channels Modal */}
       {showManageChannelsModal && (
@@ -1524,17 +1438,10 @@ export function CalendarView() {
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       Active
                     </span>
-                    {channels.length > 1 && (
+                    {(
                       <button
                         type="button"
-                        onClick={() => {
-                          setChannels((prev) => prev.filter((c) => c.id !== ch.id));
-                          addToast({
-                            title: "Channel Disconnected",
-                            description: `Removed ${ch.name}`,
-                            variant: "info",
-                          });
-                        }}
+                        onClick={() => handleDisconnectChannel(ch)}
                         className="text-neutral-500 hover:text-red-400 text-xs p-1"
                         title="Disconnect"
                       >
@@ -1586,7 +1493,7 @@ export function CalendarView() {
           >
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <h3 className="text-sm font-bold text-white">
-                Schedule New Post {selectedDayForNewPost !== null && `for ${CALENDAR_DAYS[selectedDayForNewPost].dayName} ${CALENDAR_DAYS[selectedDayForNewPost].dayNumber}`}
+                Schedule New Post {selectedDayForNewPost !== null && `for ${calendarDays[selectedDayForNewPost].dayName} ${calendarDays[selectedDayForNewPost].dayNumber}`}
               </h3>
               <button
                 type="button"
@@ -1611,6 +1518,7 @@ export function CalendarView() {
                     </option>
                   ))}
                 </select>
+                <p className="mt-2 text-[11px] text-neutral-400">This saves a workspace post for the selected platform. Publishing to a specific account is not available yet.</p>
               </div>
 
               <div>
@@ -1697,21 +1605,20 @@ export function CalendarView() {
 
             <div className="mt-4 space-y-4 text-xs text-neutral-300 leading-relaxed">
               <p>
-                The <strong>PostPilot Autonomous Publishing Agent</strong> automatically coordinates your brand assets, drafts engaging captions, formats media aspect ratios, and selects optimal high-traffic publishing slots across all linked social channels.
+                AI planning and automatic publishing are not available yet. The calendar shows posts saved in your workspace database.
               </p>
 
               <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2">
-                <h4 className="text-xs font-semibold text-white">Active Capabilities:</h4>
+                <h4 className="text-xs font-semibold text-white">Available now:</h4>
                 <ul className="list-disc list-inside space-y-1 text-neutral-400">
-                  <li>Cross-channel scheduling for Instagram, Discord, and X (Twitter)</li>
-                  <li>Auto-recirculation of evergreen media and top-performing campaigns</li>
-                  <li>Time zone intelligent slotting with GMT auto-detection</li>
-                  <li>Adaptive tone and copy generation tailored per platform</li>
+                  <li>Connect Facebook Pages and linked Instagram accounts</li>
+                  <li>View and save scheduled posts in your workspace</li>
+                  <li>Cancel a scheduled post or disconnect a channel</li>
                 </ul>
               </div>
 
               <p className="text-neutral-400 text-[11px]">
-                You can trigger automated generation anytime by typing prompts into your workspace or tapping the refresh icon in the Signal Array panel.
+                Saved schedules do not publish automatically yet.
               </p>
             </div>
 
@@ -1721,9 +1628,9 @@ export function CalendarView() {
                 onClick={() => {
                   setShowAgentModal(false);
                   addToast({
-                    title: "AI Agent Active",
-                    description: "Autonomous scheduling is monitoring your pipeline",
-                    variant: "success",
+                    title: "Scheduling unavailable",
+                    description: "AI scheduling is not available yet",
+                    variant: "info",
                   });
                 }}
                 className="px-5 py-2 rounded-xl text-xs font-semibold bg-brand-lime hover:bg-[#b1de22] text-black shadow-md transition-colors"

@@ -221,7 +221,6 @@ export function SignUpView() {
             {/* Credentials Form */}
             <form
               onSubmit={handleSubmit}
-              action="javascript:void(0)"
               className="space-y-4"
               data-purpose="registration-form"
             >

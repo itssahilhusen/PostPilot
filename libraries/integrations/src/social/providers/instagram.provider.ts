@@ -23,27 +23,11 @@ export class InstagramProvider implements ISocialMediaProvider {
     return `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
   }
 
-  async authenticate(code: string, redirectUri: string): Promise<{ tokens: AuthTokens; profile: UserProfile }> {
-    return {
-      tokens: {
-        accessToken: "ig_mock_access_token",
-        expiresAt: new Date(Date.now() + 60 * 86400 * 1000),
-      },
-      profile: {
-        handle: "reerts.app",
-        name: "Reerts",
-        avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=instagram",
-        providerId: "ig_user_12345",
-      },
-    };
+  async authenticate(_code: string, _redirectUri: string): Promise<{ tokens: AuthTokens; profile: UserProfile }> {
+    throw new Error("Instagram account connection is not implemented");
   }
 
-  async publish(tokens: AuthTokens, content: PostContent): Promise<PublishResult> {
-    return {
-      success: true,
-      externalPostId: `ig_media_${Date.now()}`,
-      url: `https://instagram.com/p/mock_${Date.now()}`,
-    };
+  async publish(_tokens: AuthTokens, _content: PostContent): Promise<PublishResult> {
+    return { success: false, error: "Instagram publishing is not implemented" };
   }
 }
-

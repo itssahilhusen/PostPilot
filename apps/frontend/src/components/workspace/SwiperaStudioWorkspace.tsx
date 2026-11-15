@@ -1463,14 +1463,16 @@ export function SwiperaStudioWorkspace({
 
   // Rail navigation handler (Idea, Create, Style, Video, Design, Calendar) - 0-flicker instant switching
   const handleNavSelect = (tab: StudioTab) => {
+    if (tab === "calendar") {
+      window.location.assign("/calendar");
+      return;
+    }
     setActiveTab(tab);
     const targetPath =
       tab === "pipeline"
         ? "/pipelines"
         : tab === "ideas"
         ? "/ideas"
-        : tab === "calendar"
-        ? "/calendar"
         : "/studio";
     if (typeof window !== "undefined" && window.location.pathname !== targetPath) {
       window.history.pushState(null, "", targetPath);
@@ -2198,9 +2200,7 @@ export function SwiperaStudioWorkspace({
               <SignalArraySidebar
                 onOpenFlywheelModal={() => setIsFlywheelModalOpen(true)}
                 onAddChannel={() => {
-                  toast.info("Manage Social Channels", {
-                    description: "Connect or re-authenticate X, LinkedIn, Threads, Instagram accounts",
-                  });
+                  window.location.assign("/calendar");
                 }}
               />
             </div>

@@ -93,6 +93,8 @@ export function WorkflowView() {
 
   // Canvas & Socket DOM References
   const canvasRef = useRef<HTMLDivElement>(null);
+  const nodesContainerRef = useRef<HTMLDivElement>(null);
+  const panRafRef = useRef<number | null>(null);
   const textIteratorSocketRef = useRef<HTMLDivElement>(null);
   const promptSocketRef = useRef<HTMLDivElement>(null);
   const llmIn1SocketRef = useRef<HTMLDivElement>(null);
@@ -113,18 +115,19 @@ export function WorkflowView() {
     wire5: "",
   });
 
-  // Calculate pixel-perfect cubic bezier curves with natural curvature (NO straight lines)
+  // Calculate pixel-perfect cubic bezier curves in container space (invariant to pan)
   const updateWirePaths = useCallback(() => {
-    if (!canvasRef.current) return;
-    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const container = nodesContainerRef.current || canvasRef.current;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
     const zoomScale = zoomLevel / 100;
 
     const getCenter = (el: HTMLElement | null) => {
       if (!el) return null;
       const rect = el.getBoundingClientRect();
       return {
-        x: (rect.left + rect.width / 2 - canvasRect.left - panOffset.x) / zoomScale,
-        y: (rect.top + rect.height / 2 - canvasRect.top - panOffset.y) / zoomScale,
+        x: (rect.left + rect.width / 2 - containerRect.left) / zoomScale,
+        y: (rect.top + rect.height / 2 - containerRect.top) / zoomScale,
       };
     };
 
@@ -176,32 +179,28 @@ export function WorkflowView() {
       wire4: makeBezier(pImgOut, pVidIn2, "M 368 620 C 650 620, 950 177, 1150 177"),
       wire5: makeBezier(pImportOut, pVidIn3, "M 700 620 C 880 620, 980 209, 1150 209"),
     });
-  }, [zoomLevel, panOffset]);
+  }, [zoomLevel]);
 
-  // Keep wires permanently synchronized with screen resize, zoom, layout shifts and DOM updates
+  // Keep wires synchronized on mount and node layout changes (without thrashing during pan)
   useEffect(() => {
-    updateWirePaths();
-    const rafId = requestAnimationFrame(updateWirePaths);
-    const timer1 = setTimeout(updateWirePaths, 60);
-    const timer2 = setTimeout(updateWirePaths, 250);
-    const timer3 = setTimeout(updateWirePaths, 600);
-
-    const handleResize = () => updateWirePaths();
-    window.addEventListener("resize", handleResize);
-
-    const observer = new ResizeObserver(() => {
+    let rafId: number | null = requestAnimationFrame(() => {
       updateWirePaths();
+      rafId = null;
     });
-    if (canvasRef.current) {
-      observer.observe(canvasRef.current);
-    }
+
+    const targetEl = canvasRef.current;
+    const observer = new ResizeObserver(() => {
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          updateWirePaths();
+          rafId = null;
+        });
+      }
+    });
+    if (targetEl) observer.observe(targetEl);
 
     return () => {
-      cancelAnimationFrame(rafId);
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      window.removeEventListener("resize", handleResize);
+      if (rafId !== null) cancelAnimationFrame(rafId);
       observer.disconnect();
     };
   }, [
@@ -273,7 +272,7 @@ export function WorkflowView() {
     toast(`Loaded template "${tpl.name}" into canvas palette.`, "info");
   };
 
-  // Canvas Pan Handlers
+  // Canvas Pan Handlers with 120fps rAF Throttling
   const handleMouseDown = (e: React.MouseEvent) => {
     if (activeTool === "pan" || e.button === 1) {
       setIsDraggingCanvas(true);
@@ -282,16 +281,22 @@ export function WorkflowView() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDraggingCanvas) {
-      setPanOffset({
-        x: e.clientX - dragStartRef.current.x,
-        y: e.clientY - dragStartRef.current.y,
-      });
-    }
+    if (!isDraggingCanvas) return;
+    const nextX = e.clientX - dragStartRef.current.x;
+    const nextY = e.clientY - dragStartRef.current.y;
+    if (panRafRef.current !== null) return;
+    panRafRef.current = requestAnimationFrame(() => {
+      setPanOffset({ x: nextX, y: nextY });
+      panRafRef.current = null;
+    });
   };
 
   const handleMouseUp = () => {
     setIsDraggingCanvas(false);
+    if (panRafRef.current !== null) {
+      cancelAnimationFrame(panRafRef.current);
+      panRafRef.current = null;
+    }
   };
 
   return (
@@ -447,6 +452,7 @@ export function WorkflowView() {
               overflow: "visible",
               transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel / 100})`,
               transformOrigin: "top left",
+              willChange: isDraggingCanvas ? "transform" : "auto",
             }}
           >
             <defs>
@@ -467,7 +473,7 @@ export function WorkflowView() {
                   stroke="#10b981"
                   strokeWidth={isExecuting ? "1.0" : "0.75"}
                   opacity="0.88"
-                  filter="url(#wire-green-glow)"
+                  filter={isDraggingCanvas ? undefined : "url(#wire-green-glow)"}
                   strokeLinecap="round"
                   style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashGreen 0.8s linear infinite" } : undefined}
                 />
@@ -483,7 +489,7 @@ export function WorkflowView() {
                   stroke="#10b981"
                   strokeWidth={isExecuting ? "1.0" : "0.75"}
                   opacity="0.88"
-                  filter="url(#wire-green-glow)"
+                  filter={isDraggingCanvas ? undefined : "url(#wire-green-glow)"}
                   strokeLinecap="round"
                   style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashGreen 0.8s linear infinite" } : undefined}
                 />
@@ -499,7 +505,7 @@ export function WorkflowView() {
                   stroke="#c5f52a"
                   strokeWidth={isExecuting ? "1.0" : "0.75"}
                   opacity="0.88"
-                  filter="url(#wire-lime-glow)"
+                  filter={isDraggingCanvas ? undefined : "url(#wire-lime-glow)"}
                   strokeLinecap="round"
                   style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashLime 0.8s linear infinite" } : undefined}
                 />
@@ -515,7 +521,7 @@ export function WorkflowView() {
                   stroke="#c5f52a"
                   strokeWidth={isExecuting ? "1.0" : "0.75"}
                   opacity="0.88"
-                  filter="url(#wire-lime-glow)"
+                  filter={isDraggingCanvas ? undefined : "url(#wire-lime-glow)"}
                   strokeLinecap="round"
                   style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashLime 0.8s linear infinite" } : undefined}
                 />
@@ -531,7 +537,7 @@ export function WorkflowView() {
                   stroke="#c5f52a"
                   strokeWidth={isExecuting ? "1.0" : "0.75"}
                   opacity="0.88"
-                  filter="url(#wire-lime-glow)"
+                  filter={isDraggingCanvas ? undefined : "url(#wire-lime-glow)"}
                   strokeLinecap="round"
                   style={isExecuting ? { strokeDasharray: "5 3", animation: "flowDashLime 0.8s linear infinite" } : undefined}
                 />
@@ -543,10 +549,12 @@ export function WorkflowView() {
           {/* Canvas Nodes Workspace (Scaled & Panned)                       */}
           {/* ============================================================== */}
           <div
+            ref={nodesContainerRef}
             className="absolute inset-0 p-5 overflow-hidden z-20 pointer-events-none"
             style={{
               transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel / 100})`,
               transformOrigin: "top left",
+              willChange: isDraggingCanvas ? "transform" : "auto",
             }}
           >
             {/* ------------------------------------------------------------ */}

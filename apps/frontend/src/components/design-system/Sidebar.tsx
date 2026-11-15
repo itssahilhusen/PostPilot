@@ -76,6 +76,7 @@ export function Sidebar({
         {/* 1. Pipeline / Workflow */}
         <Link
           href="/workflow"
+          prefetch={false}
           className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
             isPipeline
@@ -103,6 +104,7 @@ export function Sidebar({
         {/* 2. Feed (Active on this page) */}
         <Link
           href="/feed"
+          prefetch={false}
           className={cn(
             "relative w-10 h-10 rounded-xl flex items-center justify-center transition-transform",
             isFeed
@@ -126,6 +128,7 @@ export function Sidebar({
         {/* 3. Style */}
         <Link
           href="/style"
+          prefetch={false}
           className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
             isStyle
@@ -154,6 +157,7 @@ export function Sidebar({
         {/* 4. Result Studio */}
         <Link
           href="/result"
+          prefetch={false}
           className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
             isCreate
@@ -180,6 +184,7 @@ export function Sidebar({
         {/* 5. Video Studio (Active on /raw) */}
         <Link
           href="/raw"
+          prefetch={false}
           className={cn(
             "relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors shadow-sm",
             isVideo
@@ -196,6 +201,7 @@ export function Sidebar({
         {/* 6. Media Library */}
         <Link
           href="/media"
+          prefetch={false}
           className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
             isMedia
@@ -222,6 +228,7 @@ export function Sidebar({
         {/* 6. Calendar */}
         <Link
           href="/calendar"
+          prefetch={false}
           className={cn(
             "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
             isCalendar

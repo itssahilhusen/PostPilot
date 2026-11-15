@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Plus, ChevronDown, Sparkles, ArrowRight } from "lucide-react";
+import {
+  getClientCached,
+  setClientCached,
+  isClientCacheFresh,
+} from "@/lib/client-cache";
 import { Dropdown } from "./Dropdown";
 
 export interface ConnectedChannel {
@@ -11,7 +16,7 @@ export interface ConnectedChannel {
   name: string;
   handle: string;
   avatar: string;
-  platform: "x" | "linkedin" | "threads" | "instagram";
+  platform: string;
   active?: boolean;
 }
 
@@ -36,33 +41,35 @@ export function SignalArraySidebar({
   const [autoSuggestTime, setAutoSuggestTime] = useState(true);
   const [autoRecycleEvergreen, setAutoRecycleEvergreen] = useState(false);
 
-  // Channels matching screenshot
-  const channels: ConnectedChannel[] = [
-    {
-      id: "nevo",
-      name: "Nevo David",
-      handle: "@nevo_david",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-      platform: "x",
-      active: true,
-    },
-    {
-      id: "nova",
-      name: "Nova Clay",
-      handle: "@nova_clay",
-      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&fit=crop&crop=face",
-      platform: "linkedin",
-      active: true,
-    },
-    {
-      id: "acme",
-      name: "Acme Co",
-      handle: "@acme_co",
-      avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&h=100&fit=crop",
-      platform: "threads",
-      active: true,
-    },
-  ];
+  const [channels, setChannels] = useState<ConnectedChannel[]>(() => getClientCached<ConnectedChannel[]>("signal_channels") || []);
+  const [channelsError, setChannelsError] = useState("");
+  useEffect(() => {
+    let active = true;
+    if (isClientCacheFresh("signal_channels", 20000) && channels.length > 0) return;
+    fetch("/api/accounts", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Could not load connected channels");
+        return response.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        const linked = (data.accounts || [])
+          .filter((account: { status: string }) => account.status === "active")
+          .map((account: { id: string; name: string; handle: string; provider: string; avatar?: string | null }) => ({
+            id: account.id,
+            name: account.name,
+            handle: account.handle,
+            platform: account.provider,
+            avatar: account.avatar || "/brand/postpilot-logo.png",
+            active: true,
+          }));
+        setChannels(linked);
+        setClientCached("signal_channels", linked);
+        setChannelsError("");
+      })
+      .catch((error) => { if (active) setChannelsError(error.message); });
+    return () => { active = false; };
+  }, [channels.length]);
 
   const tzOptions = [
     { value: "gmt1", label: "GMT+1 · Auto-detected" },
@@ -112,26 +119,17 @@ export function SignalArraySidebar({
                     <Image
                       src={ch.avatar}
                       alt={ch.name}
-                      fill
-                      sizes="44px"
-                      className="object-cover"
+                      width={44}
+                      height={44}
+                      unoptimized
+                      className="h-full w-full object-cover"
                     />
                   </div>
                   {/* Platform Badge overlay at bottom right */}
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center p-0.5 shadow-xs">
-                    <Image
-                      src={
-                        ch.platform === "x"
-                          ? "/images/platforms/x-light.svg"
-                          : ch.platform === "linkedin"
-                          ? "/images/platforms/linkedin.svg"
-                          : "/images/platforms/threads.svg"
-                      }
-                      alt={ch.platform}
-                      width={10}
-                      height={10}
-                      className="object-contain"
-                    />
+                    <span className="text-[8px] font-bold text-[var(--foreground)]" aria-label={ch.platform}>
+                      {ch.platform === "facebook" ? "f" : ch.platform === "instagram" ? "◎" : ch.platform === "linkedin" ? "in" : ch.platform === "x" ? "𝕏" : "•"}
+                    </span>
                   </div>
                 </div>
                 <span className="text-[10px] text-[var(--muted)] group-hover:text-[var(--foreground)] font-medium max-w-[55px] truncate text-center">
@@ -140,6 +138,8 @@ export function SignalArraySidebar({
               </div>
             ))}
           </div>
+          {!channels.length && !channelsError && <p className="text-xs text-[var(--muted)]">No connected channels yet.</p>}
+          {channelsError && <p role="alert" className="text-xs text-red-400">{channelsError}</p>}
 
           {/* Add New Channel Button */}
           <button
@@ -281,23 +281,23 @@ export function SignalArraySidebar({
               <span>AI Agent</span>
             </div>
             <div className="p-1.5 rounded-lg bg-white/5 text-[10px] text-white/80 leading-snug">
-              Schedule post for upcoming week on all the channels
+              Plan posts for the upcoming week
             </div>
             <div className="flex items-center gap-1 py-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               <span className="text-[9px] text-white/60">X · LinkedIn · Threads</span>
             </div>
             <div className="p-1.5 rounded-lg bg-[#C5F52A]/10 border border-[#C5F52A]/20 text-[10px] text-white leading-snug">
-              Done — I&apos;ve scheduled 7 posts across all 3 channels for the week ahead
+              AI scheduling is not available yet. Use the calendar to save posts.
             </div>
           </div>
 
           <div>
             <h4 className="text-xs font-bold text-[var(--foreground)]">
-              Agent automated workflow
+              Plan your posting workflow
             </h4>
             <p className="text-[11px] text-[var(--muted)] leading-relaxed mt-0.5">
-              Streamline your daily posting workflow with an AI agent.
+              View connected channels and saved posts in the calendar.
             </p>
           </div>
 

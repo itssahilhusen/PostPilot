@@ -16,18 +16,11 @@ export class TikTokProvider implements ISocialMediaProvider {
     return `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=user.info.basic,video.upload&response_type=code&redirect_uri=${redirectUri}&state=${state}`;
   }
 
-  async authenticate(code: string, redirectUri: string): Promise<{ tokens: AuthTokens; profile: UserProfile }> {
-    return {
-      tokens: { accessToken: "tiktok_token", expiresAt: new Date(Date.now() + 86400 * 1000) },
-      profile: { handle: "@founder_tok", name: "Founder Tok", providerId: "tt_123" },
-    };
+  async authenticate(_code: string, _redirectUri: string): Promise<{ tokens: AuthTokens; profile: UserProfile }> {
+    throw new Error("TikTok account connection is not implemented");
   }
 
-  async publish(tokens: AuthTokens, content: PostContent): Promise<PublishResult> {
-    return {
-      success: true,
-      externalPostId: `tiktok_video_${Date.now()}`,
-    };
+  async publish(_tokens: AuthTokens, _content: PostContent): Promise<PublishResult> {
+    return { success: false, error: "TikTok publishing is not implemented" };
   }
 }
-

@@ -172,7 +172,6 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
 
       {/* Form */}
       <form
-        action="javascript:void(0)"
         onSubmit={handleSubmit}
         className="w-full flex flex-col space-y-3.5"
       >

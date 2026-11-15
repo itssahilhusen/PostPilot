@@ -5,14 +5,12 @@ import { InstagramProvider } from "./instagram.provider";
 import { ThreadsProvider } from "./threads.provider";
 import { TikTokProvider } from "./tiktok.provider";
 
-export const socialProviders: Record<SocialPlatformId, ISocialMediaProvider> = {
+export const socialProviders: Partial<Record<SocialPlatformId, ISocialMediaProvider>> = {
   x: new XProvider(),
   linkedin: new LinkedInProvider(),
   instagram: new InstagramProvider(),
   threads: new ThreadsProvider(),
   tiktok: new TikTokProvider(),
-  facebook: new InstagramProvider(), // Facebook Graph shared
-  youtube: new XProvider(), // Default stub
 };
 
 export function getSocialProvider(id: SocialPlatformId): ISocialMediaProvider {
