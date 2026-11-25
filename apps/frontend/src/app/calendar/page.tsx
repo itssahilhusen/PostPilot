@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/components/design-system/AppShell";
-import { ToastProvider } from "@/components/design-system/Toast";
 import { CalendarView } from "@/components/calendar/CalendarView";
 
 export const metadata: Metadata = {
@@ -11,10 +10,8 @@ export const metadata: Metadata = {
 
 export default function CalendarPage() {
   return (
-    <ToastProvider>
-      <AppShell activeTab="calendar">
-        <CalendarView />
-      </AppShell>
-    </ToastProvider>
+    <AppShell activeTab="calendar">
+      <CalendarView />
+    </AppShell>
   );
 }

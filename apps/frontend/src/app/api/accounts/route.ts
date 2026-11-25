@@ -2,16 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { rawPrisma } from "@/lib/prisma";
 import { getPostWorkspace } from "@/lib/post-api";
 
+function displayHandle(metadata: string | null, fallback: string) {
+  try {
+    const username: unknown = JSON.parse(metadata || "{}")?.username;
+    return typeof username === "string" && username.length ? "@" + username : fallback;
+  } catch { return fallback; }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const workspaceId = await getPostWorkspace(req);
     if (!workspaceId) return NextResponse.json({ error: "Authentication and workspace required" }, { status: 401 });
-    const accounts = await rawPrisma.socialAccount.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, select: {
-      id: true, provider: true, name: true, handle: true, avatar: true, status: true, expiresAt: true, createdAt: true, updatedAt: true, accessToken: true,
+    const accounts = await rawPrisma.channel.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, select: {
+      id: true, provider: true, name: true, handle: true, avatar: true, status: true, expiresAt: true, createdAt: true, updatedAt: true, metadata: true, accessToken: true,
     } });
-    return NextResponse.json({ accounts: accounts.map(({ accessToken, ...account }) => ({
+    return NextResponse.json({ accounts: accounts.map(({ accessToken, metadata, ...account }) => ({
       ...account,
-      status: accessToken ? account.status : "disconnected",
+      handle: displayHandle(metadata, account.handle),
+      status: !accessToken ? "disconnected" : account.expiresAt && account.expiresAt <= new Date() ? "expired" : account.status,
     })) });
   } catch (error) {
     console.error("GET /api/accounts failed", error);
@@ -36,7 +44,7 @@ export async function DELETE(req: NextRequest) {
     if (!workspaceId) return NextResponse.json({ error: "Authentication and workspace required" }, { status: 401 });
     const id = req.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
-    const result = await rawPrisma.socialAccount.deleteMany({ where: { id, workspaceId } });
+    const result = await rawPrisma.channel.updateMany({ where: { id, workspaceId }, data: { status: "disconnected", accessToken: null, refreshToken: null } });
     if (!result.count) return NextResponse.json({ error: "Account not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (error) {

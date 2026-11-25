@@ -114,11 +114,7 @@ export function SignInView() {
       }
 
       toast.success("Welcome back! Redirecting to feed...");
-      if (typeof window !== "undefined") {
-        window.location.href = callbackUrl;
-      } else {
-        router.push(callbackUrl);
-      }
+      router.replace(callbackUrl);
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Authentication failed";

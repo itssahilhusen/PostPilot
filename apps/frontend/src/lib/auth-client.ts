@@ -130,19 +130,15 @@ export const signIn = new Proxy(
 ) as unknown as SignInFunction;
 
 export type SignOutFunction = {
-  (options?: { callbackUrl?: string }): Promise<void>;
+  (): Promise<void>;
 };
 
 /**
  * Flexible signOut method supporting Better Auth style ({ callbackUrl }).
  */
 export const signOut = new Proxy(
-  async function (options?: { callbackUrl?: string }) {
+  async function () {
     await (authClient.signOut as any)({ fetchOptions: {} });
-    const target = options?.callbackUrl || "/login";
-    if (typeof window !== "undefined") {
-      window.location.href = target;
-    }
   },
   {
     get(target, prop, receiver) {

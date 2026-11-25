@@ -1,94 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getFlywheelConfig, saveFlywheelConfig } from "@/lib/flywheel-store";
+import { z } from "zod";
+import { rawPrisma } from "@/lib/prisma";
+import { getPostWorkspace, postInput } from "@/lib/post-api";
+import { resolveDestinations, schedulingError } from "@/lib/destinations";
 
-export async function GET(req: NextRequest) {
-  return handleReview(req);
+export function GET(req: NextRequest) {
+  return NextResponse.redirect(new URL("/calendar?review=1", req.url));
 }
 
 export async function POST(req: NextRequest) {
-  return handleReview(req);
-}
-
-async function handleReview(req: NextRequest) {
   try {
-    let action = "approve";
-    let postId = "";
-
-    if (req.method === "GET") {
-      const { searchParams } = new URL(req.url);
-      action = searchParams.get("action") || "approve";
-      postId = searchParams.get("postId") || "";
-    } else {
-      const body = await req.json().catch(() => ({}));
-      action = body.action || "approve";
-      postId = body.postId || "";
+    const workspaceId = await getPostWorkspace(req);
+    if (!workspaceId) return NextResponse.json({ error: "Workspace authentication required" }, { status: 401 });
+    const input = postInput.extend({ action: z.enum(["approve", "reject"]), postId: z.string().min(1) }).safeParse(await req.json());
+    if (!input.success) return NextResponse.json({ error: "Invalid review" }, { status: 400 });
+    const { postId, action, content, mediaUrls = [], channelIds, scheduledAt } = input.data;
+    const where = { id: postId, workspaceId, status: { in: ["PENDING_APPROVAL", "PENDING_REVIEW"] } };
+    if (action === "reject") {
+      const rejected = await rawPrisma.post.updateMany({ where, data: { status: "DRAFT", scheduledAt: null } });
+      return NextResponse.json({ success: !!rejected.count }, { status: rejected.count ? 200 : 409 });
     }
-
-    if (!postId) {
-      return NextResponse.json({ error: "postId is required" }, { status: 400 });
-    }
-
-    const config = getFlywheelConfig();
-
-    // Default to tomorrow at the user's scheduled time (e.g. 10:00 AM)
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + 1);
-    const [hours, minutes] = (config.scheduleTime || "10:00").split(":").map(Number);
-    targetDate.setHours(hours || 10, minutes || 0, 0, 0);
-
-    let updatedPost: any = null;
-
-    try {
-      if (action === "approve") {
-        updatedPost = await prisma.post.update({
-          where: { id: postId },
-          data: {
-            status: "SCHEDULED",
-            scheduledAt: targetDate,
-          },
-        });
-      } else if (action === "reject") {
-        updatedPost = await prisma.post.update({
-          where: { id: postId },
-          data: {
-            status: "DRAFT",
-          },
-        });
-      }
-    } catch (err: any) {
-      console.warn("Prisma update failed in review endpoint (using mock):", err.message);
-      updatedPost = {
-        id: postId,
-        status: action === "approve" ? "SCHEDULED" : "DRAFT",
-        scheduledAt: targetDate.toISOString(),
-      };
-    }
-
-    // Update flywheel store status
-    saveFlywheelConfig({
-      lastRunStatus: action === "approve" ? "success" : "pending_review",
+    if (!scheduledAt || Date.parse(scheduledAt) <= Date.now() || !content?.trim()) return NextResponse.json({ error: "Choose a future time and caption" }, { status: 400 });
+    const channels = await resolveDestinations(workspaceId, channelIds, undefined, "SCHEDULED", mediaUrls);
+    const changed = await rawPrisma.$transaction(async tx => {
+      const updated = await tx.post.updateMany({ where, data: { content, mediaUrls: JSON.stringify(mediaUrls), platforms: JSON.stringify([...new Set(channels.map(c => c.provider))]), status: "SCHEDULED", scheduledAt } });
+      if (!updated.count) return false;
+      await tx.postChannel.deleteMany({ where: { postId, workspaceId, status: "PENDING" } });
+      await tx.postChannel.createMany({ data: channels.map(c => ({ postId, workspaceId, accountId: c.id, scheduledAt })) });
+      return true;
     });
-
-    const isBrowserRequest = req.headers.get("accept")?.includes("text/html");
-    if (isBrowserRequest) {
-      // Redirect to Calendar with celebratory status
-      const baseUrl = req.nextUrl.origin || "http://localhost:3000";
-      const redirectUrl = new URL(`/calendar`, baseUrl);
-      redirectUrl.searchParams.set("approved", action === "approve" ? "true" : "rejected");
-      redirectUrl.searchParams.set("postId", postId);
-      return NextResponse.redirect(redirectUrl);
-    }
-
-    return NextResponse.json({
-      success: true,
-      action,
-      post: updatedPost,
-      scheduledAt: targetDate.toISOString(),
-    });
-  } catch (err: any) {
-    console.error("Flywheel review route error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+    return NextResponse.json(changed ? { success: true } : { error: "Draft already reviewed or unavailable" }, { status: changed ? 200 : 409 });
+  } catch (error) { return schedulingError(error) || NextResponse.json({ error: "Could not save review" }, { status: 500 }); }
 }
-

@@ -20,7 +20,7 @@ model Workspace {
   updatedAt   DateTime @updatedAt
 
   users       User[]
-  accounts    SocialAccount[]
+  accounts    Channel[]
   posts       Post[]
   brandVoices BrandVoice[]
   ideas       Idea[]
@@ -146,7 +146,7 @@ model Invitation {
   @@map("invitation")
 }
 
-model SocialAccount {
+model Channel {
   id           String    @id @default(cuid())
   workspaceId  String
   workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -163,9 +163,10 @@ model SocialAccount {
   updatedAt    DateTime  @updatedAt
 
   personas     Persona[]
-  deliveries   PostDelivery[]
+  deliveries   PostChannel[]
   queueSchedule QueueSchedule?
 
+  @@map("SocialAccount")
   @@unique([workspaceId, provider, handle])
   @@unique([id, workspaceId])
 }
@@ -189,7 +190,7 @@ model Post {
   updatedAt     DateTime      @updatedAt
 
   variants      PostVariant[]
-  deliveries    PostDelivery[]
+  deliveries    PostChannel[]
   history       PostHistory[]
 
   @@index([workspaceId, status])
@@ -198,13 +199,13 @@ model Post {
 }
 
 // Each destination has its own lifecycle and external response.
-model PostDelivery {
+model PostChannel {
   id             String        @id @default(cuid())
   workspaceId    String
   postId         String
   accountId      String
   post           Post          @relation(fields: [postId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
-  account        SocialAccount @relation(fields: [accountId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  account        Channel @relation(fields: [accountId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
   content        String?       @db.Text
   status         String        @default("PENDING")
   scheduledAt    DateTime?
@@ -221,6 +222,7 @@ model PostDelivery {
   updatedAt      DateTime      @updatedAt
   attempts       PublishingAttempt[]
 
+  @@map("PostDelivery")
   @@unique([postId, accountId])
   @@unique([accountId, scheduledAt])
   @@index([workspaceId, status, scheduledAt])
@@ -231,7 +233,7 @@ model PostDelivery {
 model PublishingAttempt {
   id             String       @id @default(cuid())
   deliveryId     String
-  delivery       PostDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  delivery       PostChannel @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
   attemptNumber  Int
   status         String
   startedAt      DateTime     @default(now())
@@ -261,7 +263,7 @@ model QueueSchedule {
   id          String        @id @default(cuid())
   workspaceId String
   accountId   String        @unique
-  account     SocialAccount @relation(fields: [accountId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  account     Channel @relation(fields: [accountId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
   timezone    String
   paused      Boolean       @default(false)
   createdAt   DateTime      @default(now())
@@ -467,7 +469,7 @@ model Persona {
   workspaceId                      String
   workspace                        Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   socialAccountId                  String?
-  socialAccount                    SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  socialAccount                    Channel? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
   blogAccountId                    String?
 
   personaNumber                    Int            @default(0) // 0: Slot A, 1: Slot B

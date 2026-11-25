@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { AccountsRepository } from "@reerts/database";
+import { AccountsRepository, prisma } from "@reerts/database";
 import { EncryptionHelper } from "@reerts/helpers";
 import { ConnectAccountDto } from "./dto/connect-account.dto";
 
@@ -25,7 +25,7 @@ export class AccountsService {
       ? EncryptionHelper.encrypt(dto.refreshToken)
       : undefined;
 
-    return AccountsRepository.upsertAccount({
+    const account = await AccountsRepository.upsertAccount({
       workspaceId: dto.workspaceId,
       provider: dto.provider,
       name: dto.name,
@@ -34,14 +34,16 @@ export class AccountsService {
       accessToken: encryptedAccessToken,
       refreshToken: encryptedRefreshToken,
     });
+    const { accessToken, refreshToken, ...metadata } = account;
+    return metadata;
   }
 
-  async disconnect(id: string) {
-    const account = await AccountsRepository.findAccountById(id);
-    if (!account) {
+  async disconnect(id: string, workspaceId: string) {
+    const changed = await prisma.channel.updateMany({ where: { id, workspaceId }, data: { accessToken: null, refreshToken: null, status: "disconnected" } });
+    if (!changed.count) {
       throw new NotFoundException(`Account ${id} not found`);
     }
-    return AccountsRepository.disconnect(id);
+
   }
 }
 

@@ -1,0 +1,110 @@
+// @vitest-environment node
+import { createCipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
+import { NextRequest } from "next/server";
+import { describe, expect, it, vi } from "vitest";
+
+const generate = vi.hoisted(() => vi.fn());
+vi.mock("@google/genai", () => ({ GoogleGenAI: class { models = { generateContent: generate }; } }));
+const session = vi.hoisted(() => ({ getSession: vi.fn() }));
+vi.mock("@/lib/auth", () => ({ auth: { api: session } }));
+const local = (s?: string) => !!s && new URL(s).hostname === "127.0.0.1";
+const enabled = process.env.PUBLISH_INTEGRATION === "1" && local(process.env.DATABASE_URL) && local(process.env.REDIS_URL);
+
+describe.skipIf(!enabled)("multi-channel publishing with PostgreSQL and Redis", () => {
+  it("isolates accounts, respects review, skips stale jobs and records partial failure", async () => {
+    const { rawPrisma: db } = await import("./prisma");
+    const { GET, POST } = await import("../app/api/posts/route");
+    const { PATCH } = await import("../app/api/posts/[id]/route");
+    const { POST: approve } = await import("../app/api/automations/daily-pipeline/review/route");
+    const { dispatch } = await import("../../../orchestrator/src/dispatch");
+    const { initPostPublishWorker } = await import("../../../orchestrator/src/workers/post-publish.worker");
+    const { postQueue, automationQueue, redisConnection } = await import("../../../orchestrator/src/queues/post.queue");
+    const { prisma } = await import("@reerts/database");
+    const workspace = await db.workspace.create({ data: { handle: randomUUID() } });
+    const other = await db.workspace.create({ data: { handle: randomUUID() } });
+    const user = await db.user.create({ data: { name: "Reviewer", email: randomUUID() + "@example.test", workspaceId: workspace.id } });
+    session.getSession.mockResolvedValue({ user });
+    const secret = randomBytes(32).toString("hex");
+    vi.stubEnv("ENCRYPTION_SECRET", secret);
+    const iv = randomBytes(12);
+    const cipher = createCipheriv("aes-256-gcm", createHash("sha256").update(secret).digest(), iv);
+    const encrypted = [iv.toString("hex"), Buffer.concat([cipher.update("test-token"), cipher.final()]).toString("hex"), cipher.getAuthTag().toString("hex")].join(":");
+    const make = (handle: string, workspaceId = workspace.id) => db.channel.create({ data: { handle, workspaceId, provider: "facebook", name: handle, accessToken: encrypted } });
+    const [one, two, foreign] = await Promise.all([make("11"), make("22"), make("33", other.id)]);
+    const req = (body: object, method = "POST") => new NextRequest("http://localhost/api/posts", { method, body: JSON.stringify(body) });
+    const graph = vi.fn(async (url: string) => url.includes("/22/") ? Response.json({ error: { code: 200 } }, { status: 403 }) : Response.json({ id: "remote-11" }));
+    vi.stubGlobal("fetch", graph);
+    const worker = initPostPublishWorker();
+    try {
+      const { POST: generateDraft } = await import("../app/api/automations/daily-pipeline/run/route");
+      const { POST: signUpload } = await import("../app/api/media/publish-upload/route");
+      vi.stubEnv("GEMINI_API_KEY", "test-key");
+      vi.stubEnv("MEDIA_BUCKET_URL", "https://bucket.s3.amazonaws.com");
+      vi.stubEnv("MEDIA_PUBLIC_URL", "https://cdn.example.org");
+      vi.stubEnv("MEDIA_REGION", "us-east-1");
+      vi.stubEnv("MEDIA_SECRET_ACCESS_KEY", "test-key");
+      vi.stubEnv("MEDIA_ACCESS_KEY_ID", "test-id");
+      const upload = await signUpload(req({ type: "image/jpeg", bytes: 1024 }));
+      expect(upload.status).toBe(200);
+      const links = await upload.json();
+      expect(links.publicUrl).toContain(workspace.id);
+      expect(new URL(links.uploadUrl).searchParams.get("X-Amz-SignedHeaders")).toContain("content-length");
+      const feed = '<rss><channel><item><title>Industry update</title><link>https://example.org/article</link><description>Source summary</description></item></channel></rss>';
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(feed)));
+      generate.mockResolvedValue({ text: JSON.stringify({ caption: "News", slides: [{ title: "A", body: "First" }, { title: "B", body: "Second" }] }) });
+      const generated = await generateDraft(req({ niche: "energy" }));
+      expect(generated.status).toBe(200);
+      const aiPost = (await generated.json()).post;
+      expect(aiPost.status).toBe("PENDING_APPROVAL");
+      expect(aiPost.workspaceId).toBe(workspace.id);
+      expect(aiPost.scheduledAt).toBeNull();
+      expect((await (await generateDraft(req({ niche: "energy" }))).json()).generated).toBe(false);
+      vi.stubGlobal("fetch", graph);
+      const { GET: oauth } = await import("../app/api/integrations/threads/[action]/route");
+      vi.stubEnv("THREADS_APP_ID", "test-id");
+      vi.stubEnv("THREADS_APP_SECRET", "test-secret");
+      const connect = await oauth(new NextRequest("http://localhost/api/integrations/threads/connect"), { params: { action: "connect" } });
+      const state = new URL(connect.headers.get("location")!).searchParams.get("state")!;
+      const callback = new NextRequest("http://localhost/api/integrations/threads/callback?code=test&state=" + state, { headers: { cookie: "postpilot_threads_state=" + state } });
+      const threadsGraph = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json({ access_token: "short" }))
+        .mockResolvedValueOnce(Response.json({ access_token: "long-test-token", expires_in: 86400 }))
+        .mockResolvedValueOnce(Response.json({ id: "123", username: "example" }));
+      vi.stubGlobal("fetch", threadsGraph);
+      expect((await oauth(callback, { params: { action: "callback" } })).headers.get("location")).toContain("threads=connected");
+      expect((await oauth(callback, { params: { action: "callback" } })).headers.get("location")).toContain("threads=denied");
+      const connected = await db.channel.findFirstOrThrow({ where: { workspaceId: workspace.id, provider: "threads" } });
+      expect(connected.accessToken).not.toContain("long-test-token");
+      vi.stubGlobal("fetch", graph);
+      const future = new Date(Date.now() + 60000).toISOString();
+      expect((await POST(req({ content: "private", channelIds: [foreign.id], scheduledAt: future }))).status).toBe(400);
+      const draft = await POST(req({ content: "Approved caption", channelIds: [one.id], status: "PENDING_APPROVAL" }));
+      expect(draft.status).toBe(201);
+      const { post } = await draft.json();
+      expect((await PATCH(req({ status: "SCHEDULED", scheduledAt: future }, "PATCH"), { params: { id: post.id } })).status).toBe(409);
+      const payload = { postId: post.id, action: "approve", content: post.content, channelIds: [one.id, two.id], scheduledAt: future };
+      expect((await approve(req(payload))).status).toBe(200);
+      expect((await approve(req(payload))).status).toBe(409);
+      await dispatch();
+      expect((await postQueue.getDelayed()).length).toBeGreaterThanOrEqual(2);
+      const query = await GET(new NextRequest("http://localhost/api/posts?channel_id=" + two.id));
+      expect((await query.json()).posts[0].deliveries).toHaveLength(2);
+      const saved = await PATCH(req({ scheduledAt: new Date(Date.now() + 700).toISOString() }, "PATCH"), { params: { id: post.id } });
+      expect(saved.status).toBe(200);
+      for (const stale of await postQueue.getDelayed()) await stale.promote();
+      await dispatch();
+      await vi.waitFor(async () => expect((await db.post.findUniqueOrThrow({ where: { id: post.id } })).status).toBe("FAILED"), { timeout: 10000 });
+      const results = await db.postChannel.findMany({ where: { postId: post.id }, include: { attempts: true } });
+      expect(results.find(r => r.accountId === one.id)?.externalPostId).toBe("remote-11");
+      expect(results.find(r => r.accountId === two.id)?.failureReason).toContain("403");
+      expect(results.every(r => r.attempts.length === 1)).toBe(true);
+      expect(graph).toHaveBeenCalledTimes(2);
+    } finally {
+      await worker.close();
+      await postQueue.close(); await automationQueue.close(); await redisConnection.quit();
+      await db.user.delete({ where: { id: user.id } });
+      await db.workspace.deleteMany({ where: { id: { in: [workspace.id, other.id] } } });
+      await db.$disconnect(); await prisma.$disconnect();
+      vi.unstubAllGlobals(); vi.unstubAllEnvs();
+    }
+  }, 20000);
+});

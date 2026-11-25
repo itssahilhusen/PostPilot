@@ -1,6 +1,7 @@
 export type SocialPlatformId = "x" | "linkedin" | "threads" | "instagram" | "tiktok" | "facebook" | "youtube";
 
 export interface PostContent {
+  externalId?: string;
   text: string;
   threads?: string[];
   mediaUrls?: string[];

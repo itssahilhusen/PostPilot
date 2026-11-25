@@ -117,11 +117,7 @@ export function SignUpView() {
         return;
       }
 
-      if (typeof window !== "undefined") {
-        window.location.href = callbackUrl;
-      } else {
-        router.push(callbackUrl);
-      }
+      router.replace(callbackUrl);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Registration failed";

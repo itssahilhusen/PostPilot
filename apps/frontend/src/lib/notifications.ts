@@ -97,7 +97,7 @@ async function sendDiscordEmbed(
           },
           {
             name: "🎯 One-Click Creator Actions",
-            value: `[✅ **Approve & Schedule (10:00 AM)**](${urls.approveUrl})\n[🎨 **Open & Retouch in Reerts Studio**](${urls.studioUrl})\n[📅 **View Content Calendar**](${urls.calendarUrl})`,
+            value: `[✅ **Review draft**](${urls.approveUrl})\n[🎨 **Open & Retouch in Reerts Studio**](${urls.studioUrl})\n[📅 **View Content Calendar**](${urls.calendarUrl})`,
             inline: false,
           },
         ],
@@ -216,7 +216,7 @@ async function sendTelegramMessage(
 ${escapeTelegram(payload.summary.slice(0, 180))}...
 
 *Action Links:*
-• [Approve & Schedule for 10:00 AM](${urls.approveUrl})
+• [Review draft](${urls.approveUrl})
 • [Open & Retouch in Reerts Studio](${urls.studioUrl})
 • [View Content Calendar](${urls.calendarUrl})`;
 

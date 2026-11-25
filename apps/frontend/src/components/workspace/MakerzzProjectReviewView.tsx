@@ -1307,7 +1307,7 @@ export function MakerzzProjectReviewView({
                               { type: "Real screenshot", tag: "Verified Primary Narrative" },
                               { type: "Browser recording", tag: "Contextual Live Capture" },
                             ]
-                        ).map((cap, cIdx) => (
+                        ).map((cap: { type: string; tag: string }, cIdx: number) => (
                           <div
                             key={cIdx}
                             className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50"

@@ -85,3 +85,15 @@
    - News Sources & Ingestion: `http://localhost:3000/ideas`
    - Visual Studio: `http://localhost:3000/studio`
    - Publishing Calendar: `http://localhost:3000/calendar`
+
+## Multi-channel publishing
+
+In Calendar, connect a channel and choose **New Post** to select destination accounts, attach media and set a publication time. **Agent Workflow** opens the Auto-Ants review queue. Reviewers can edit the caption, attach generated slides as JPEGs and approve a schedule.
+
+- Run the frontend, backend and orchestrator together with `pnpm dev`. The worker needs Redis, the same PostgreSQL database as the frontend and the same token encryption configuration. The Prisma names `Channel` and `PostChannel` map to the existing `SocialAccount` and `PostDelivery` tables. Apply the repository’s scheduling-foundation migration if the delivery tables are missing and regenerate Prisma Client.
+- Configure Meta for Page publishing and Instagram content publishing. For Threads, register the frontend callback `/api/integrations/threads/callback` and set the credentials in `.env.example`. Instagram requires media. Facebook supports text, photos, multi-photo posts and single videos. Threads supports text and media containers.
+- Set `MEDIA_BUCKET_URL` to the S3-compatible bucket endpoint, `MEDIA_PUBLIC_URL` to the corresponding public asset base and bucket CORS to allow PUT from the frontend origin. The composer can also use existing public HTTPS assets. Use extensions such as .jpg and .mp4 for pasted media URLs.
+- For recurring Auto-Ants runs, configure `AUTO_ANTS_WORKSPACE_ID`, `AUTO_ANTS_APP_URL` and a shared `AUTO_ANTS_SECRET` of at least 32 characters on the worker and frontend. The frontend uses `GEMINI_API_KEY` and optional RSS, niche and model settings. The default cron runs at 08:00 UTC.
+- Each destination records its provider ID or failure and its publishing attempts. If the worker loses contact during a publish and cannot confirm the result, check the provider before scheduling another copy.
+
+The opt-in scheduling integration suite requires **disposable** PostgreSQL and Redis instances on 127.0.0.1. Point `DATABASE_URL`, `DATABASE_URL_UNPOOLED` and `REDIS_URL` at them, initialize the test schema, then run `pnpm test` with `PUBLISH_INTEGRATION=1`. The suite exercises real queues and database transactions with simulated provider responses.

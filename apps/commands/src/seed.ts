@@ -50,7 +50,7 @@ async function main() {
   ];
 
   for (const acc of initialAccounts) {
-    await prisma.socialAccount.upsert({
+    await prisma.channel.upsert({
       where: {
         workspaceId_provider_handle: {
           workspaceId: workspace.id,
@@ -242,7 +242,7 @@ async function main() {
   }
 
   // 7. Seed Sample Personas A & B for Personas Clone
-  const sampleThreads = await prisma.socialAccount.findFirst({
+  const sampleThreads = await prisma.channel.findFirst({
     where: { workspaceId: workspace.id, provider: "threads" },
   });
 

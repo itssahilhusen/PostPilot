@@ -90,10 +90,6 @@ export function DailyFlywheelModal({ isOpen, onClose, onScheduledSuccess }: Dail
   };
 
   const handleTestRunNow = async () => {
-    if (config.notificationChannel !== "telegram" && !config.webhookUrl) {
-      toast.error("Please enter a Discord or Slack Webhook URL to test live delivery.");
-      return;
-    }
 
     setTestingRun(true);
     setTestResult(null);
@@ -114,13 +110,14 @@ export function DailyFlywheelModal({ isOpen, onClose, onScheduledSuccess }: Dail
 
       const data = await res.json();
       if (res.ok && data.success) {
+        if (data.generated === false) { toast.info("No new stories to review", { id: "flywheel-test" }); return; }
         setTestResult(data);
         if (data.notificationSent) {
           toast.success("Success! Carousel created and dispatched to your Discord/Slack webhook!", {
             id: "flywheel-test",
           });
         } else {
-          toast.success("Carousel created! (Webhook notification warning: check URL)", {
+          toast.success("Draft added to the calendar review queue", {
             id: "flywheel-test",
           });
         }
@@ -373,12 +370,11 @@ export function DailyFlywheelModal({ isOpen, onClose, onScheduledSuccess }: Dail
             <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 space-y-2 animate-in fade-in duration-150">
               <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-xs">
                 <CheckCircle2 className="size-4" />
-                <span>Test Run Succeeded! Post Created in Calendar</span>
+                <span>Draft ready for review</span>
               </div>
               <p className="text-xs font-bold text-[var(--fg)]">&quot;{testResult.post?.title}&quot;</p>
               <p className="text-[11px] text-[var(--muted)]">
-                Status: <span className="font-mono text-[#c6f432]">{testResult.status}</span> · Scheduled for{" "}
-                {new Date(testResult.scheduledAt).toLocaleDateString()} at 10:00 AM
+                Status: <span className="font-mono text-[#c6f432]">{testResult.status}</span>
               </p>
               {testResult.notificationSent ? (
                 <p className="text-[11px] text-emerald-300">
@@ -386,7 +382,7 @@ export function DailyFlywheelModal({ isOpen, onClose, onScheduledSuccess }: Dail
                 </p>
               ) : (
                 <p className="text-[11px] text-amber-300">
-                  Notice: No webhook URL configured or webhook unreachable, but carousel was created and scheduled.
+                  Open Agent Workflow in Calendar to review this draft.
                 </p>
               )}
             </div>

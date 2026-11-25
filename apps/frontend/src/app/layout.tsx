@@ -36,6 +36,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { Toaster } from "sonner";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Inter, Instrument_Serif, Playfair_Display } from "next/font/google";
@@ -88,7 +89,10 @@ export default function RootLayout({
             __html: `(function(){try{document.documentElement.classList.add("dark");document.body.classList.add("dark");}catch(e){}})();`,
           }}
         />
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <Toaster position="bottom-right" theme="dark" richColors closeButton />
+        </AuthProvider>
       </body>
     </html>
   );

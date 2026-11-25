@@ -24,6 +24,7 @@
     "@reerts/helpers": "workspace:*",
     "@reerts/integrations": "workspace:*",
     "@reerts/react": "workspace:*",
+    "aws4fetch": "^1.0.20",
     "bcryptjs": "^3.0.3",
     "better-auth": "^1.7.21",
     "bullmq": "^5.10.0",

@@ -2,7 +2,7 @@ export interface Channel {
   id: string;
   name: string;
   handle: string;
-  platform: "facebook" | "instagram" | "discord" | "twitter" | "tiktok" | "linkedin" | "youtube";
+  platform: "threads" | "facebook" | "instagram" | "discord" | "twitter" | "tiktok" | "linkedin" | "youtube";
   avatarUrl: string;
   badgeBg: string;
   badgeIcon: string;

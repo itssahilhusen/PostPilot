@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
 import { ChevronDown, Languages, Sun, Moon, Menu, X, ArrowRight, Sparkles, BookOpen, Wrench, User } from "lucide-react";
 import { ReertsLogo } from "@/components/ReertsLogo";
@@ -15,6 +16,7 @@ interface HeaderProps {
 }
 
 export function Header({ onOpenTrial, isDark, onToggleTheme, onLogout }: HeaderProps) {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -201,7 +203,10 @@ export function Header({ onOpenTrial, isDark, onToggleTheme, onLogout }: HeaderP
             <>
               <button
                 type="button"
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={async () => {
+                  await signOut();
+                  router.replace("/login");
+                }}
                 className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-3.5 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
               >
                 Log out
@@ -314,9 +319,10 @@ export function Header({ onOpenTrial, isDark, onToggleTheme, onLogout }: HeaderP
                   </Link>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setMobileMenuOpen(false);
-                      signOut({ callbackUrl: "/login" });
+                      await signOut();
+                      router.replace("/login");
                     }}
                     className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-card py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
                   >

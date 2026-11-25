@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { PostPilotLogo } from "./PostPilotLogo";
@@ -69,6 +70,7 @@ export function TopHeader({
   onSendToSchedule,
   onProfileClick,
 }: TopHeaderProps) {
+  const router = useRouter();
   const [workspaces, setWorkspaces] = useState<WorkspaceTab[]>(DEFAULT_WORKSPACES);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>("halcyon");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -330,9 +332,10 @@ export function TopHeader({
               <div className="border-t border-white/10 mt-1 pt-1">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     setProfileDropdownOpen(false);
-                    signOut({ callbackUrl: "/login" });
+                    await signOut();
+                    router.replace("/login");
                   }}
                   className="w-full text-left px-3 py-2 hover:bg-white/10 text-red-400 transition-colors cursor-pointer"
                 >

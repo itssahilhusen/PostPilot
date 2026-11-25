@@ -1,4 +1,5 @@
 import {
+  Headers,
   Controller,
   Get,
   Post,
@@ -24,32 +25,32 @@ export class PostsController {
   @ApiQuery({ name: "status", required: false, enum: ["DRAFT", "SCHEDULED", "PUBLISHED", "FAILED"] })
   @ApiResponse({ status: 200, description: "List of posts returned successfully" })
   async getPosts(
-    @Query("workspaceId") workspaceId: string = "ws-default-1",
+    @Headers("cookie") cookie: string,
     @Query("status") status?: string
   ) {
-    const data = await this.postsService.getPosts(workspaceId, status);
+    const data = await this.postsService.getPosts(cookie, status);
     return { success: true, count: data.length, data };
   }
 
   @Get(":id")
   @ApiOperation({ summary: "Get single post by ID" })
-  async getPostById(@Param("id") id: string) {
-    const data = await this.postsService.getPostById(id);
+  async getPostById(@Param("id") id: string, @Headers("cookie") cookie: string) {
+    const data = await this.postsService.getPostById(id, cookie);
     return { success: true, data };
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Create a draft or scheduled post" })
-  async createPost(@Body() dto: CreatePostDto) {
-    const data = await this.postsService.createPost(dto);
+  async createPost(@Body() dto: CreatePostDto, @Headers("cookie") cookie: string) {
+    const data = await this.postsService.createPost(dto, cookie);
     return { success: true, data };
   }
 
   @Delete(":id")
   @ApiOperation({ summary: "Delete post by ID" })
-  async deletePost(@Param("id") id: string) {
-    await this.postsService.deletePost(id);
+  async deletePost(@Param("id") id: string, @Headers("cookie") cookie: string) {
+    await this.postsService.deletePost(id, cookie);
     return { success: true, message: `Post ${id} deleted successfully` };
   }
 }

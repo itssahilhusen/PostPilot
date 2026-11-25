@@ -3,7 +3,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 const db = vi.hoisted(() => ({
   verification: { create: vi.fn(), findFirst: vi.fn(), deleteMany: vi.fn() },
   user: { findUnique: vi.fn() },
-  socialAccount: { upsert: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), deleteMany: vi.fn(), update: vi.fn() },
+  channel: { upsert: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
 }));
 vi.mock("@reerts/database", () => ({ prisma: db }));
 import { MetaOAuthService } from "./meta-oauth.service";
@@ -76,23 +76,23 @@ describe("Meta OAuth foundation", () => {
       return { ok: true, json: async () => payload };
     }));
     expect(await service.complete("auth-code", identity)).toBe(2);
-    expect(db.socialAccount.upsert).toHaveBeenCalledTimes(2);
-    const page = db.socialAccount.upsert.mock.calls[0][0];
+    expect(db.channel.upsert).toHaveBeenCalledTimes(2);
+    const page = db.channel.upsert.mock.calls[0][0];
     expect(page.create.workspaceId).toBe(identity.workspaceId);
     expect(page.create.accessToken).not.toContain("page-secret");
     expect(page.create.refreshToken).not.toContain("long-secret");
     expect(page.create.expiresAt).toEqual(new Date(2000000000 * 1000));
     expect(JSON.parse(page.create.metadata).scopes).toContain("pages_show_list");
     expect(JSON.parse(page.create.metadata).facebookUserId).toBe("facebook-user-1");
-    expect(db.socialAccount.upsert.mock.calls[1][0].create.provider).toBe("instagram");
+    expect(db.channel.upsert.mock.calls[1][0].create.provider).toBe("instagram");
   });
 
   it("fails on Meta code exchange errors and scopes disconnection", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false })));
     await expect(service.complete("bad-code", identity)).rejects.toThrow();
-    db.socialAccount.deleteMany.mockResolvedValue({ count: 1 });
+    db.channel.updateMany.mockResolvedValue({ count: 1 });
     await service.disconnect(identity, "account-1");
-    expect(db.socialAccount.deleteMany.mock.calls[0][0].where.workspaceId).toBe(identity.workspaceId);
+    expect(db.channel.updateMany.mock.calls[0][0].where.workspaceId).toBe(identity.workspaceId);
   });
 
   it("does not treat a profile-only Meta login as a connected Page", async () => {
@@ -104,7 +104,7 @@ describe("Meta OAuth foundation", () => {
       return { ok: true, json: async () => payload };
     }));
     await expect(service.complete("code", identity)).rejects.toThrow("META_PAGES_SHOW_LIST_MISSING");
-    expect(db.socialAccount.upsert).not.toHaveBeenCalled();
+    expect(db.channel.upsert).not.toHaveBeenCalled();
   });
 
   it("distinguishes a listed Page without a usable Page token", async () => {
@@ -117,7 +117,7 @@ describe("Meta OAuth foundation", () => {
       return { ok: true, json: async () => payload };
     }));
     await expect(service.complete("code", identity)).rejects.toThrow("META_PAGE_ACCESS_MISSING");
-    expect(db.socialAccount.upsert).not.toHaveBeenCalled();
+    expect(db.channel.upsert).not.toHaveBeenCalled();
   });
 
   it("keeps a Page when no Instagram account is linked", async () => {
@@ -131,7 +131,7 @@ describe("Meta OAuth foundation", () => {
       return { ok: true, json: async () => payload };
     }));
     expect(await service.complete("code", identity)).toBe(1);
-    expect(db.socialAccount.upsert).toHaveBeenCalledOnce();
+    expect(db.channel.upsert).toHaveBeenCalledOnce();
   });
 
   it("validates Better Auth session and workspace ownership", async () => {
@@ -143,11 +143,11 @@ describe("Meta OAuth foundation", () => {
   });
 
   it("lists accounts without tokens and rejects cross-workspace disconnection", async () => {
-    db.socialAccount.findMany.mockResolvedValue([{ id: "account-1", provider: "facebook", name: "Page", handle: "page-1", status: "active", expiresAt: null, metadata: "{}" }]);
+    db.channel.findMany.mockResolvedValue([{ id: "account-1", provider: "facebook", name: "Page", handle: "page-1", status: "active", expiresAt: null, metadata: "{}" }]);
     const accounts = await service.accounts(identity);
     expect(accounts[0]).not.toHaveProperty("accessToken");
-    expect(db.socialAccount.findMany.mock.calls[0][0].where.workspaceId).toBe(identity.workspaceId);
-    db.socialAccount.deleteMany.mockResolvedValue({ count: 0 });
+    expect(db.channel.findMany.mock.calls[0][0].where.workspaceId).toBe(identity.workspaceId);
+    db.channel.updateMany.mockResolvedValue({ count: 0 });
     await expect(service.disconnect(identity, "someone-elses-account")).rejects.toThrow();
   });
 });

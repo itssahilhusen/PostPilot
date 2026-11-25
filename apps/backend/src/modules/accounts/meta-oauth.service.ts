@@ -20,7 +20,7 @@ export class MetaOAuthService {
 
   async identity(cookie: string | undefined): Promise<Identity> {
     if (!cookie) throw new UnauthorizedException();
-    const response = await fetch(new URL("/api/auth/get-session", this.config.authUrl), { headers: { cookie }, signal: AbortSignal.timeout(8000) });
+    const response = await fetch(new URL("/api/auth/get-session", process.env.BETTER_AUTH_URL || "http://localhost:3000"), { headers: { cookie }, signal: AbortSignal.timeout(8000) });
     if (!response.ok) throw new UnauthorizedException();
     const session = await response.json() as { user?: { id?: string } };
     if (!session.user?.id) throw new UnauthorizedException();
@@ -133,22 +133,22 @@ export class MetaOAuthService {
   private async saveAccount(identity: Identity, provider: string, externalId: string, name: string, username: string | null, token: string, scopes: string[], facebookUserId: string, pageId: string | null, userToken: string, userTokenExpiresAt: Date | null, pageExpiresAt: Date | null) {
     const metadata = JSON.stringify({ externalId, username, facebookUserId, connectedByUserId: identity.userId, scopes, pageId, userTokenExpiresAt: userTokenExpiresAt?.toISOString() || null });
     // The existing schema's unique handle stores the stable Meta account ID; display name remains separate.
-    await prisma.socialAccount.upsert({ where: { workspaceId_provider_handle: { workspaceId: identity.workspaceId, provider, handle: externalId } }, update: { name, accessToken: this.encrypt(token), refreshToken: this.encrypt(userToken), metadata, status: "active", expiresAt: pageExpiresAt }, create: { workspaceId: identity.workspaceId, provider, handle: externalId, name, accessToken: this.encrypt(token), refreshToken: this.encrypt(userToken), metadata, status: "active", expiresAt: pageExpiresAt } });
+    await prisma.channel.upsert({ where: { workspaceId_provider_handle: { workspaceId: identity.workspaceId, provider, handle: externalId } }, update: { name, accessToken: this.encrypt(token), refreshToken: this.encrypt(userToken), metadata, status: "active", expiresAt: pageExpiresAt }, create: { workspaceId: identity.workspaceId, provider, handle: externalId, name, accessToken: this.encrypt(token), refreshToken: this.encrypt(userToken), metadata, status: "active", expiresAt: pageExpiresAt } });
   }
 
   async accounts(identity: Identity) {
-    const accounts = await prisma.socialAccount.findMany({ where: { workspaceId: identity.workspaceId, provider: { in: ["facebook", "instagram"] } }, select: { id: true, provider: true, name: true, handle: true, status: true, expiresAt: true, metadata: true } });
+    const accounts = await prisma.channel.findMany({ where: { workspaceId: identity.workspaceId, provider: { in: ["facebook", "instagram"] } }, select: { id: true, provider: true, name: true, handle: true, status: true, expiresAt: true, metadata: true } });
     return accounts.map(({ metadata, ...account }) => ({ ...account, status: account.expiresAt && account.expiresAt <= new Date() ? "expired" : account.status, details: JSON.parse(metadata || "{}") }));
   }
 
   async disconnect(identity: Identity, id: string) {
-    const result = await prisma.socialAccount.deleteMany({ where: { id, workspaceId: identity.workspaceId, provider: { in: ["facebook", "instagram"] } } });
+    const result = await prisma.channel.updateMany({ where: { id, workspaceId: identity.workspaceId, provider: { in: ["facebook", "instagram"] } }, data: { status: "disconnected", accessToken: null, refreshToken: null } });
     if (!result.count) throw new BadRequestException("Account not found");
   }
 
 
   async refresh(identity: Identity, id: string) {
-    const account = await prisma.socialAccount.findFirst({ where: { id, workspaceId: identity.workspaceId, provider: { in: ["facebook", "instagram"] } } });
+    const account = await prisma.channel.findFirst({ where: { id, workspaceId: identity.workspaceId, provider: { in: ["facebook", "instagram"] } } });
     if (!account?.refreshToken) throw new BadRequestException("Reconnect this account through Meta");
     const existingUserToken = this.decrypt(account.refreshToken);
     const renewed = await this.graph<{ access_token: string; expires_in?: number }>("oauth/access_token", { grant_type: "fb_exchange_token", client_id: this.config.appId, client_secret: this.config.secret, fb_exchange_token: existingUserToken });
@@ -158,7 +158,7 @@ export class MetaOAuthService {
     if (!page?.access_token) throw new BadRequestException("Meta access was removed; reconnect this account");
     const debug = await this.graph<{ data: { expires_at?: number; is_valid: boolean } }>("debug_token", { input_token: page.access_token, access_token: `${this.config.appId}|${this.config.secret}` });
     if (!debug.data.is_valid) throw new BadRequestException("Meta token is invalid; reconnect this account");
-    await prisma.socialAccount.update({ where: { id }, data: { accessToken: this.encrypt(page.access_token), refreshToken: this.encrypt(renewed.access_token), expiresAt: debug.data.expires_at ? new Date(debug.data.expires_at * 1000) : null, status: "active" } });
+    await prisma.channel.update({ where: { id }, data: { accessToken: this.encrypt(page.access_token), refreshToken: this.encrypt(renewed.access_token), expiresAt: debug.data.expires_at ? new Date(debug.data.expires_at * 1000) : null, status: "active" } });
     return { success: true };
   }
 }

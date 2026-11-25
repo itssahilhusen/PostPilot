@@ -11,8 +11,14 @@ export enum PostStatusEnum {
 export class CreatePostDto {
   @ApiProperty({ description: "Workspace ID owning this post", example: "ws-default-1" })
   @IsString()
-  @IsNotEmpty()
-  workspaceId!: string;
+  @IsOptional()
+  workspaceId?: string;
+
+  @ApiPropertyOptional({ description: "Connected channel IDs" })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  channelIds?: string[];
 
   @ApiProperty({ description: "Post title or headline", example: "5 Growth Frameworks for 2026" })
   @IsString()

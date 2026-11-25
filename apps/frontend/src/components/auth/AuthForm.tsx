@@ -98,11 +98,7 @@ export function AuthForm({ initialMode = "signin", onClose, isModal = false }: A
       }
 
       toast.success("Welcome back! Redirecting to feed...");
-      if (typeof window !== "undefined") {
-        window.location.href = callbackUrl;
-      } else {
-        router.push(callbackUrl);
-      }
+      router.replace(callbackUrl);
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
       setLoading(false);

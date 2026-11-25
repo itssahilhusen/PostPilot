@@ -25,7 +25,7 @@ importers:
         version: 3.0.3
       better-auth:
         specifier: ^1.7.21
-        version: 1.7.21(@prisma/client@5.22.0(prisma@5.22.0))(next@14.2.5(@babel/core@7.29.7(supports-color@8.1.1))(@playwright/test@1.65.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(pg@8.23.1)(prisma@5.22.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15)))
+        version: 1.7.21(@prisma/client@5.22.0(prisma@5.22.0))(next@14.2.5(@babel/core@7.29.7(supports-color@8.1.1))(@playwright/test@1.65.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(pg@8.23.1)(prisma@5.22.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))
       bullmq:
         specifier: ^5.10.0
         version: 5.81.5(supports-color@8.1.1)
@@ -250,12 +250,15 @@ importers:
       '@reerts/react':
         specifier: workspace:*
         version: link:../../libraries/react-shared-libraries
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
       better-auth:
         specifier: ^1.7.21
-        version: 1.7.21(@prisma/client@5.22.0(prisma@5.22.0))(next@14.2.5(@babel/core@7.29.7(supports-color@8.1.1))(@playwright/test@1.65.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(pg@8.23.1)(prisma@5.22.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))
+        version: 1.7.21(@prisma/client@5.22.0(prisma@5.22.0))(next@14.2.5(@babel/core@7.29.7(supports-color@8.1.1))(@playwright/test@1.65.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(pg@8.23.1)(prisma@5.22.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15)))
       bullmq:
         specifier: ^5.10.0
         version: 5.81.5(supports-color@8.1.1)
@@ -310,7 +313,7 @@ importers:
         version: 1.65.0
       '@testing-library/jest-dom':
         specifier: ^7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))
+        version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15)))
       '@testing-library/react':
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -331,7 +334,7 @@ importers:
         version: 18.3.7(@types/react@18.3.31)
       '@vitejs/plugin-react':
         specifier: ^6.3.0
-        version: 6.3.0(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+        version: 6.3.0(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15))
       autoprefixer:
         specifier: ^10.4.19
         version: 10.6.2(postcss@8.5.32)
@@ -358,7 +361,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+        version: 5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15))
 
   apps/orchestrator:
     dependencies:
@@ -1790,6 +1793,9 @@ packages:
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
+
+  aws4fetch@1.0.20:
+    resolution: {integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==}
 
   axe-core@4.14.0:
     resolution: {integrity: sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==}
@@ -5055,7 +5061,7 @@ snapshots:
       picocolors: 1.1.1
       pretty-format: 27.5.1
 
-  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.2)(vitest@5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))':
+  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.2)(vitest@5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15)))':
     dependencies:
       '@adobe/css-tools': 4.5.0
       '@testing-library/dom': 10.4.2
@@ -5065,7 +5071,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
     optionalDependencies:
-      vitest: 5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      vitest: 5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15))
 
   '@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
@@ -5317,10 +5323,10 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.12.2':
     optional: true
 
-  '@vitejs/plugin-react@6.3.0(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))':
+  '@vitejs/plugin-react@6.3.0(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15))':
     dependencies:
       '@rolldown/pluginutils': 1.1.0
-      vite: 8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
+      vite: 8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15)
 
   '@vitest/mocker@5.1.0(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15))':
     dependencies:
@@ -5330,7 +5336,6 @@ snapshots:
       magic-string: 1.4.5
     optionalDependencies:
       vite: 8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@1.21.7)(tsx@4.23.15)
-    optional: true
 
   '@vitest/mocker@5.1.0(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))':
     dependencies:
@@ -5494,6 +5499,8 @@ snapshots:
   available-typed-arrays@1.0.7:
     dependencies:
       possible-typed-array-names: 1.1.0
+
+  aws4fetch@1.0.20: {}
 
   axe-core@4.14.0: {}
 
@@ -8316,7 +8323,6 @@ snapshots:
       fsevents: 2.3.3
       jiti: 1.21.7
       tsx: 4.23.15
-    optional: true
 
   vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15):
     dependencies:
@@ -8353,7 +8359,6 @@ snapshots:
       jsdom: 31.0.0(@noble/hashes@2.4.0)
     transitivePeerDependencies:
       - msw
-    optional: true
 
   vitest@5.1.0(@types/node@20.19.43)(jsdom@31.0.0(@noble/hashes@2.4.0))(vite@8.3.6(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)):
     dependencies:

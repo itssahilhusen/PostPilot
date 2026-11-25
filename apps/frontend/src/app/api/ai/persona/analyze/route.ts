@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
       }
 
       const account = account_id
-        ? await prisma.socialAccount.findUnique({ where: { id: account_id } })
-        : await prisma.socialAccount.findFirst({ where: { workspaceId: workspace.id } });
+        ? await prisma.channel.findUnique({ where: { id: account_id } })
+        : await prisma.channel.findFirst({ where: { workspaceId: workspace.id } });
 
       const personaData = {
         workspaceId: workspace.id,

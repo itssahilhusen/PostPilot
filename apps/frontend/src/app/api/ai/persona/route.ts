@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       });
 
       if (personas.length === 0) {
-        const socialAccount = await prisma.socialAccount.findFirst({
+        const socialAccount = await prisma.channel.findFirst({
           where: { workspaceId: workspace.id },
         });
 

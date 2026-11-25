@@ -1,3 +1,4 @@
+import { publishChannelContent } from "../../graph-publisher";
 import {
   ISocialMediaProvider,
   SocialPlatformId,
@@ -27,7 +28,7 @@ export class InstagramProvider implements ISocialMediaProvider {
     throw new Error("Instagram account connection is not implemented");
   }
 
-  async publish(_tokens: AuthTokens, _content: PostContent): Promise<PublishResult> {
-    return { success: false, error: "Instagram publishing is not implemented" };
+  async publish(tokens: AuthTokens, content: PostContent): Promise<PublishResult> {
+    return publishChannelContent(this.identifier, tokens, content);
   }
 }
